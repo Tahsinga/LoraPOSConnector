@@ -23,21 +23,31 @@
     .stat { background:var(--white); border:1px solid var(--line); padding:18px 20px; }
     .stat span { display:block; color:var(--muted); font:700 11px Arial,sans-serif; letter-spacing:1.2px; text-transform:uppercase; }
     .stat strong { display:block; margin-top:7px; font-size:31px; font-weight:500; }
-    .workspace { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(320px, .85fr); gap:20px; align-items:start; }
+    .workspace { display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(320px, .85fr); gap:20px; align-items:stretch; }
     .panel { background:var(--white); border:1px solid var(--line); padding:26px; box-shadow:0 12px 35px rgba(28,62,54,.06); }
     .panel h2 { margin:0 0 5px; font-size:25px; font-weight:500; }
     .panel .sub { margin:0 0 22px; color:var(--muted); font:14px/1.5 Arial,sans-serif; }
     form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     label { display:flex; flex-direction:column; gap:7px; color:#435153; font:700 11px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
     input, select { width:100%; height:46px; padding:12px 13px; color:var(--ink); background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; outline:none; font:16px Georgia,serif; }
+    .branch-options { display:grid; gap:7px; max-height:142px; overflow:auto; padding:8px; background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; }
+    .branch-option { display:flex; flex-direction:row; align-items:center; gap:9px; padding:7px 8px; color:var(--ink); background:#fff; border:1px solid #e1e9e5; font:14px Arial,sans-serif; letter-spacing:0; text-transform:none; cursor:pointer; }
+    .branch-option input { width:17px; height:17px; margin:0; accent-color:var(--teal); }
+    .branch-options.is-disabled { opacity:.55; pointer-events:none; }
     input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
     .wide { grid-column:1/-1; }
+    .branch-all { grid-column:1/-1; flex-direction:row; align-items:center; gap:9px; }
+    .branch-all input { width:17px; height:17px; margin:0; accent-color:var(--teal); }
+    .branch-all span { color:var(--ink); font:700 12px Arial,sans-serif; letter-spacing:.6px; text-transform:none; }
+    #branch-help { grid-column:1/-1; margin:-7px 0 0; }
     button { grid-column:1/-1; margin-top:5px; padding:14px 18px; color:#fff; background:var(--coral); border:0; border-radius:2px; cursor:pointer; font:700 12px Arial,sans-serif; letter-spacing:1.3px; text-transform:uppercase; }
     button:hover { background:#bd4e3e; }
     button:disabled { opacity:.6; cursor:wait; }
     .notice { min-height:22px; margin-top:14px; font:14px/1.4 Arial,sans-serif; }
     .notice.ok { color:var(--teal-dark); } .notice.error { color:#a53b2e; }
     .queue { margin-top:20px; }
+    .report-panel { grid-column:1; grid-row:2; margin-top:20px; }
+    .queue { grid-column:2; grid-row:1; margin-top:0; }
     .queue-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
     .queue-head h2 { margin:0; }
     .history-button { display:inline-block; padding:9px 12px; color:var(--teal-dark); background:#e1f0eb; border:0; border-radius:2px; font:700 10px Arial,sans-serif; letter-spacing:1px; text-decoration:none; text-transform:uppercase; }
@@ -51,7 +61,7 @@
     .badge { align-self:start; padding:5px 8px; color:#8b651d; background:#fff3d4; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
     .badge.confirmed { color:#176342; background:#dff2e7; }
     .empty { padding:18px 0 4px; color:var(--muted); font:14px Arial,sans-serif; }
-    @media (max-width:760px) { header { display:block; padding-top:28px; } .live { margin-top:20px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel { padding:20px; } form { grid-template-columns:1fr; } .wide { grid-column:auto; } button { grid-column:auto; } }
+    @media (max-width:760px) { header { display:block; padding-top:28px; } .live { gap:5px; margin-top:20px; font-size:9px; letter-spacing:.5px; } .history-link, .logout-button { font-size:9px; letter-spacing:.5px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel { padding:20px; } .report-panel, .queue { grid-column:auto; grid-row:auto; margin-top:20px; } form { grid-template-columns:1fr; } .wide { grid-column:auto; } button { grid-column:auto; } }
   </style>
 </head>
 <body>
@@ -76,6 +86,18 @@
         </form>
         <div id="notice" class="notice" role="status"></div>
       </div>
+      <div class="panel report-panel">
+        <h2>Print sales report</h2>
+        <p class="sub">Print end-of-day totals by cashier and payment method on the branch computer.</p>
+        <form id="report-form">
+          <label>Report date<input id="report-date" name="report_date" type="date" required></label>
+          <label>Branches<div id="report-branches" class="branch-options" role="group" aria-describedby="branch-help"><span class="sub">Loading branches...</span></div></label>
+          <label class="branch-all"><input id="all-branches" type="checkbox"><span>All connected branches</span></label>
+          <small id="branch-help" class="sub">Select one or more branches.</small>
+          <button id="report-submit" type="submit">Run and print report</button>
+        </form>
+        <div id="report-notice" class="notice" role="status"></div>
+      </div>
       <div class="panel queue">
         <div class="queue-head"><h2>Branch queue</h2><div><a class="history-button" href="/history/">View cancelled invoices</a><button class="refresh" id="refresh" type="button">Refresh</button></div></div>
         <div id="rows" class="rows"><div class="empty">Loading queue...</div></div>
@@ -87,9 +109,33 @@
   const form = document.querySelector('#cancel-form');
   const notice = document.querySelector('#notice');
   const submit = document.querySelector('#submit');
+  const reportForm = document.querySelector('#report-form');
+  const reportNotice = document.querySelector('#report-notice');
+  const reportSubmit = document.querySelector('#report-submit');
+  const allBranches = document.querySelector('#all-branches');
   const rows = document.querySelector('#rows');
   const branchSelect = document.querySelector('#branch');
+  const reportBranches = document.querySelector('#report-branches');
+  const reportSelectionKey = 'lora-report-branch-selection';
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+  function loadReportSelection() {
+    try { return JSON.parse(localStorage.getItem(reportSelectionKey) || '{"branches":[],"all":false}'); }
+    catch (error) { return { branches: [], all: false }; }
+  }
+  function saveReportSelection() {
+    localStorage.setItem(reportSelectionKey, JSON.stringify({
+      branches: [...reportBranches.querySelectorAll('.branch-option-input:checked')].map(input => input.value),
+      all: allBranches.checked,
+    }));
+  }
+  function restoreReportSelection() {
+    const saved = loadReportSelection();
+    reportBranches.querySelectorAll('.branch-option-input').forEach(input => {
+      input.checked = saved.branches?.includes(input.value) ?? false;
+    });
+    allBranches.checked = saved.all === true;
+    reportBranches.classList.toggle('is-disabled', allBranches.checked);
+  }
   async function refreshQueue() {
     try {
       const response = await fetch('/api/main-sync/');
@@ -109,6 +155,10 @@
         ? '<option value="">Select connected branch</option>' + data.branches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('')
         : '<option value="">No branches connected</option>';
       if ([...branchSelect.options].some(option => option.value === selected)) branchSelect.value = selected;
+      reportBranches.innerHTML = data.branches?.length
+        ? data.branches.map(branch => `<label class="branch-option"><input class="branch-option-input" type="checkbox" value="${escapeHtml(branch.name)}"${branch.name === selected ? ' checked' : ''}><span>${escapeHtml(branch.name)}</span></label>`).join('')
+        : '<span class="sub">No branches connected</span>';
+      restoreReportSelection();
     } catch (error) {
       branchSelect.innerHTML = '<option value="">Branches unavailable</option>';
     }
@@ -125,6 +175,31 @@
     } catch (error) { notice.className = 'notice error'; notice.textContent = error.message; }
     finally { submit.disabled = false; }
   });
+  reportForm.addEventListener('submit', async event => {
+    event.preventDefault(); reportSubmit.disabled = true; reportNotice.className = 'notice'; reportNotice.textContent = '';
+    const selectedBranches = [...reportBranches.querySelectorAll('.branch-option-input:checked')].map(input => input.value);
+    const payload = {
+      report_date: document.querySelector('#report-date').value,
+      branches: selectedBranches,
+      all_branches: allBranches.checked,
+    };
+    try {
+      const response = await fetch('/api/sales-report/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Sales report could not be queued.');
+      reportNotice.className = 'notice ok'; reportNotice.textContent = data.message + ' The branch computer will print it on its next sync.';
+    } catch (error) { reportNotice.className = 'notice error'; reportNotice.textContent = error.message; }
+    finally { reportSubmit.disabled = false; }
+  });
+  allBranches.addEventListener('change', () => {
+    reportBranches.classList.toggle('is-disabled', allBranches.checked);
+    if (allBranches.checked) reportBranches.querySelectorAll('.branch-option-input').forEach(input => input.checked = false);
+    saveReportSelection();
+  });
+  reportBranches.addEventListener('change', saveReportSelection);
+  const today = new Date();
+  const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  document.querySelector('#report-date').value = localDate;
   document.querySelector('#refresh').addEventListener('click', refreshQueue);
   refreshQueue(); refreshBranches(); setInterval(refreshQueue, 8000); setInterval(refreshBranches, 8000);
 </script>

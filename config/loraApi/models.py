@@ -20,3 +20,18 @@ class DeletionRecord(models.Model):
 
 	class Meta:
 		ordering = ['timestamp']
+
+
+class SalesReportRequest(models.Model):
+	request_id = models.CharField(max_length=255, primary_key=True)
+	branch = models.CharField(max_length=255)
+	report_date = models.DateField()
+	status = models.CharField(max_length=20, default='pending')
+	requested_by = models.CharField(max_length=255, blank=True, default='')
+	requested_at = models.DateTimeField(auto_now_add=True)
+	completed_at = models.DateTimeField(null=True, blank=True)
+	row_count = models.IntegerField(null=True, blank=True)
+	error_message = models.TextField(blank=True, default='')
+
+	class Meta:
+		ordering = ['-requested_at']

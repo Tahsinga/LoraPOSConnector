@@ -8,9 +8,10 @@ from django.db import transaction
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import DeletionRecord
+from .models import DeletionRecord, SalesReportRequest
 from .state_store import sync_users_to_state
 
 """
@@ -65,6 +66,15 @@ def record_payload(record):
         'deleted_rows': record.deleted_rows,
         'confirmed_branch': record.confirmed_branch,
         'confirmation_timestamp': record.confirmation_timestamp.timestamp() if record.confirmation_timestamp else None,
+    }
+
+
+def report_payload(report):
+    return {
+        'id': report.request_id,
+        'branch': report.branch,
+        'report_date': report.report_date.isoformat(),
+        'status': report.status,
     }
 
 
@@ -227,6 +237,75 @@ def cancel_sale(request):
     return JsonResponse({'status': 'accepted', 'message': f'Cancellation queued for invoice {invoice}.', 'deletion_id': deletion_record.deletion_id}, status=202)
 
 
+@login_required(login_url='/login/')
+@csrf_exempt
+def request_sales_report(request):
+    """Queue a Movement sales report for printing on a connected branch PC."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Use POST method'}, status=405)
+
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    requested_branches = payload.get('branches')
+    if requested_branches is None:
+        requested_branches = [payload.get('branch', '')]
+    if not isinstance(requested_branches, list):
+        requested_branches = [requested_branches]
+
+    branches = [str(branch).strip() for branch in requested_branches if str(branch).strip()]
+    if payload.get('all_branches'):
+        branches = [branch['name'] for branch in CONNECTED_BRANCHES.values()]
+    branches = sorted(set(branches), key=str.casefold)
+    report_date = parse_date(str(payload.get('report_date', '')).strip())
+    if not branches or report_date is None:
+        return JsonResponse({'status': 'error', 'message': 'Select at least one branch and a valid report date.'}, status=400)
+
+    reports = []
+    for index, branch in enumerate(branches):
+        request_id = f"REPORT_{branch}_{report_date.isoformat()}_{int(time.time() * 1000)}_{index}"
+        reports.append(SalesReportRequest.objects.create(
+            request_id=request_id,
+            branch=branch,
+            report_date=report_date,
+            requested_by=request.user.get_username(),
+        ))
+    return JsonResponse({
+        'status': 'accepted',
+        'message': f'Sales reports queued for {len(reports)} branch(es) on {report_date.isoformat()}.',
+        'reports': [report_payload(report) for report in reports],
+    }, status=202)
+
+
+@csrf_exempt
+def complete_sales_report(request):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Use POST method'}, status=405)
+
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+
+    request_id = str(payload.get('report_id', '')).strip()
+    if not request_id:
+        return JsonResponse({'status': 'error', 'message': 'Missing report_id'}, status=400)
+
+    try:
+        report = SalesReportRequest.objects.get(request_id=request_id)
+    except SalesReportRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Report request not found'}, status=404)
+
+    report.status = 'printed' if payload.get('success') else 'failed'
+    report.row_count = int(payload.get('row_count') or 0)
+    report.error_message = str(payload.get('error') or '')
+    report.completed_at = timezone.now()
+    report.save(update_fields=['status', 'row_count', 'error_message', 'completed_at'])
+    return JsonResponse({'status': 'ok', 'report': report_payload(report)})
+
+
 @csrf_exempt
 def branch_status(request):
     """Register a branch heartbeat or list branches currently online."""
@@ -292,12 +371,22 @@ def branch_sync(request):
             pending_query = pending_query.filter(branch__iexact=branch_name)
         pending = [record_payload(item) for item in pending_query]
 
+        report_query = SalesReportRequest.objects.filter(status='pending')
+        if branch_name:
+            report_query = report_query.filter(branch__iexact=branch_name)
+        with transaction.atomic():
+            reports = list(report_query.select_for_update())
+            for report in reports:
+                report.status = 'processing'
+                report.save(update_fields=['status'])
+
         return JsonResponse({
             'status': 'ok',
             'service': 'branch_sync_trigger',
             'branch_filter': branch_name,
             'pending_deletions': pending,
             'count': len(pending),
+            'pending_reports': [report_payload(item) for item in reports],
             'message': f'Found {len(pending)} deletion(s) to process'
         })
 

@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [
     host.strip()
     for host in os.environ.get(
         'ALLOWED_HOSTS',
-        'localhost,127.0.0.1,testserver,loraapi.onrender.com,lora-api.onrender.com',
+        'localhost,127.0.0.1,192.168.1.145,testserver,loraapi.onrender.com,lora-api.onrender.com',
     ).split(',')
     if host.strip()
 ]
@@ -131,8 +131,8 @@ STATIC_ROOT = BASE_DIR.parent / 'staticfiles'
 
 # Security settings for production
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_SECURITY_POLICY = {
     'default-src': ("'self'",),

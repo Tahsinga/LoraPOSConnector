@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [
     host.strip()
     for host in os.environ.get(
         'ALLOWED_HOSTS',
-        'localhost,127.0.0.1,192.168.1.145,testserver,loraapi.onrender.com,lora-api.onrender.com',
+        'localhost,127.0.0.1,192.168.1.145,192.168.110.87,testserver,loraapi.onrender.com,lora-api.onrender.com',
     ).split(',')
     if host.strip()
 ]

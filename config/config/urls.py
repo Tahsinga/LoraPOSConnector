@@ -10,7 +10,7 @@ Function views
 Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
+Including another URLconfInsufficient main stock. Available: 49.958. Add received stock in Update main stock first
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
@@ -19,7 +19,7 @@ import logging
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from loraApi.views import cancellation_history, favicon, index, user_management
+from loraApi.views import cancellation_history, favicon, index, main_stock, product_movement_history, user_management
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,8 @@ class AuditLoginView(auth_views.LoginView):
 
 urlpatterns = [
     path('', index, name='dashboard'),
+    path('stock/', main_stock, name='main_stock_page'),
+    path('stock/movements/history/', product_movement_history, name='product_movement_history_page'),
     path('history/', cancellation_history, name='cancellation_history_page'),
     path('login/', AuditLoginView.as_view(template_name='loraApi/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),

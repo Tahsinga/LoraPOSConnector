@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lora | Main stock</title>
+  <style>
+    :root { --ink:#182326; --muted:#6d7b7d; --line:#dbe3df; --paper:#f5f7f4; --white:#fff; --teal:#087f78; --teal-dark:#075d5a; --coral:#d95f4d; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:Georgia, 'Times New Roman', serif; }
+    .shell { min-height:100vh; background:radial-gradient(circle at 90% 0, #dceee7 0, transparent 34%), linear-gradient(135deg, #f8faf7 0, #edf3ef 100%); }
+    header { display:flex; justify-content:space-between; align-items:end; gap:24px; max-width:980px; margin:auto; padding:42px 28px 30px; }
+    .page-title { flex-shrink:0; }
+    .eyebrow { margin:0 0 8px; color:var(--teal); font:700 12px/1.2 Arial,sans-serif; letter-spacing:2px; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(34px, 5vw, 58px); line-height:.95; font-weight:500; white-space:nowrap; }
+    .nav { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:flex-end; }
+    .nav-link, .logout-button { color:var(--teal-dark); font:700 12px Arial,sans-serif; letter-spacing:1px; text-decoration:none; text-transform:uppercase; }
+    .logout-form { display:inline; margin:0; }
+    .logout-button { padding:0; background:none; border:0; cursor:pointer; }
+    .logout-button:hover, .nav-link:hover { color:var(--coral); }
+    main { max-width:980px; margin:auto; padding:0 28px 54px; }
+    .intro { margin:0 0 22px; color:var(--muted); font:14px/1.5 Arial,sans-serif; }
+    .workspace { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .stock-actions { display:grid; grid-column:1/-1; grid-template-columns:minmax(0, 1fr); gap:20px; }
+    .panel { background:var(--white); border:1px solid var(--line); padding:26px; box-shadow:0 12px 35px rgba(28,62,54,.06); }
+    .panel-wide { grid-column:1/-1; }
+    h2 { margin:0 0 5px; font-size:25px; font-weight:500; }
+    .sub { margin:0 0 22px; color:var(--muted); font:14px/1.5 Arial,sans-serif; }
+    form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    label { display:flex; flex-direction:column; gap:7px; color:#435153; font:700 11px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
+    input, select { width:100%; height:46px; padding:12px 13px; color:var(--ink); background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; outline:none; font:16px Georgia,serif; }
+    input[type="number"] { -moz-appearance:textfield; }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { margin:0; -webkit-appearance:none; }
+    input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
+    button { grid-column:1/-1; margin-top:5px; padding:14px 18px; color:#fff; background:var(--coral); border:0; border-radius:2px; cursor:pointer; font:700 12px Arial,sans-serif; letter-spacing:1.3px; text-transform:uppercase; }
+    button:hover { background:#bd4e3e; }
+    button:disabled { opacity:.6; cursor:wait; }
+    .browser-heading { display:flex; justify-content:space-between; align-items:start; gap:20px; margin-bottom:18px; }
+    .browser-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+    .activity-branch-label { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; }
+    .activity-branch-label select { width:auto; min-width:150px; }
+    .catalog-status { color:var(--muted); font:13px Arial,sans-serif; }
+    .refresh-stock-button { width:auto; margin:0; padding:9px 12px; background:var(--teal); }
+    .refresh-stock-button:hover { background:var(--teal-dark); }
+    .selected-branch { margin:0 0 20px; padding:14px 16px; background:#e7f2ee; border:1px solid #c9ddd5; border-left:4px solid var(--teal); }
+    .selected-branch select { height:50px; font-size:18px; font-weight:600; }
+    .branch-load-row { display:flex; gap:10px; align-items:end; margin-bottom:20px; }
+    .branch-load-row .selected-branch { flex:1; margin:0; }
+    .load-stock-button { flex:0 0 auto; width:auto; margin:0; padding:14px 16px; background:var(--teal); }
+    .load-stock-button:hover { background:var(--teal-dark); }
+    .transfer-form { margin-top:20px; padding-top:20px; border-top:1px solid var(--line); }
+    .transfer-panel { padding-top:16px; padding-bottom:14px; }
+    .transfer-panel h2 { margin-bottom:2px; }
+    .transfer-panel .sub { margin-bottom:8px; }
+    .transfer-panel .branch-load-row { margin-bottom:8px; }
+    .transfer-panel .selected-branch { padding:6px 10px; }
+    .transfer-panel .selected-branch select { height:36px; padding:6px 11px; font-size:15px; line-height:1.2; }
+    .transfer-panel .load-stock-button { padding:10px 13px; }
+    .transfer-panel .transfer-form { grid-template-columns:minmax(0, 1.5fr) minmax(150px, .75fr) auto; align-items:end; gap:10px; margin-top:8px; padding-top:8px; }
+    .transfer-panel .transfer-form input { height:40px; padding:8px 11px; }
+    .transfer-panel .transfer-form button { grid-column:auto; margin-top:0; padding:10px 14px; white-space:nowrap; }
+    .transfer-panel .notice { min-height:0; margin-top:8px; }
+    .product-list { display:grid; gap:8px; max-height:360px; overflow:auto; margin-top:14px; }
+    .product-row { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:16px; align-items:center; width:100%; margin:0; padding:12px 14px; color:var(--ink); background:#fbfcfa; border:1px solid var(--line); text-align:left; text-transform:none; letter-spacing:0; }
+    .product-row:hover { color:var(--ink); background:#e7f2ee; border-color:#9dcac0; }
+    .product-row strong { display:block; font:16px Georgia,serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .product-row small { display:block; margin-top:4px; color:var(--muted); font:12px Arial,sans-serif; }
+    .product-row span { color:var(--teal-dark); font:700 11px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .stock-table-wrap { overflow-x:auto; margin-top:16px; border:1px solid var(--line); }
+    .stock-table { width:100%; min-width:680px; border-collapse:collapse; }
+    .stock-table th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .stock-table td { padding:13px; border-bottom:1px solid var(--line); font:14px Arial,sans-serif; }
+    .stock-table tr:last-child td { border-bottom:0; }
+    .stock-table .product-name { font:16px Georgia,serif; }
+    .stock-table button { margin:0; padding:8px 10px; font-size:10px; }
+    .empty { margin:0; padding:18px 0 4px; color:var(--muted); font:14px Arial,sans-serif; }
+    .movement-table { width:100%; border-collapse:collapse; min-width:620px; }
+    .movement-table th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .movement-table td { padding:13px; border-bottom:1px solid var(--line); font:14px Arial,sans-serif; }
+    .movement-table tr:last-child td { border-bottom:0; }
+    .movement-table .received { color:var(--teal-dark); font-weight:700; }
+    .movement-table .sold { color:#a53b2e; font-weight:700; }
+    .transfer-table { width:100%; border-collapse:collapse; min-width:760px; }
+    .transfer-table th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .transfer-table td { padding:13px; border-bottom:1px solid var(--line); font:14px Arial,sans-serif; }
+    .transfer-table tr:last-child td { border-bottom:0; }
+    .transfer-status { display:inline-block; padding:5px 8px; color:#176342; background:#dff2e7; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .transfer-status.processing { color:#78570b; background:#fff1c7; }
+    .transfer-status.failed { color:#a53b2e; background:#f9dfda; }
+    .notice { min-height:22px; margin-top:14px; font:14px/1.4 Arial,sans-serif; }
+    .notice.ok { color:var(--teal-dark); } .notice.error { color:#a53b2e; }
+    .section-jump-button { display:none; position:fixed; right:24px; bottom:24px; z-index:20; width:auto; margin:0; padding:12px 16px; color:#fff; background:var(--teal-dark); border:1px solid rgba(255,255,255,.35); border-radius:999px; box-shadow:0 10px 24px rgba(28,62,54,.2); grid-column:auto; }
+    .section-jump-button.visible { display:block; }
+    .section-jump-button:hover { background:var(--coral); }
+    #products-panel, #stock-activity-panel { scroll-margin-top:24px; }
+    @media (max-width:760px) { header { display:block; padding:28px 16px 24px; } .nav { justify-content:flex-start; margin-top:20px; gap:10px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel, .panel-wide { grid-column:auto; padding:20px; } form { grid-template-columns:1fr; } .transfer-panel .transfer-form { grid-template-columns:1fr; } .transfer-panel .transfer-form button { grid-column:1/-1; } button { grid-column:auto; } .browser-heading { display:block; } .catalog-status { display:block; margin-top:8px; } .product-row { grid-template-columns:1fr; gap:8px; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="page-title"><p class="eyebrow">Lora operations</p><h1>Main stock</h1></div>
+    <nav class="nav"><a class="nav-link" href="/stock/movements/history/">Product movements</a><a class="nav-link" href="/">Sale control</a><a class="nav-link" href="/history/">Cancellation history</a>{% if user.is_superuser %}<a class="nav-link" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></nav>
+  </header>
+  <main>
+    <p class="intro">Update central stock or send stock to a connected branch.</p>
+    <section class="workspace">
+      <div class="stock-actions">
+      <div class="panel">
+        <h2>Update main stock</h2>
+        <p class="sub">Enter the exact stock-take value for this product.</p>
+        <form id="main-stock-form">
+          <label>Product<input id="main-stock-search" type="search" list="main-stock-products" required placeholder="Type product name"><datalist id="main-stock-products"></datalist></label>
+          <input id="main-stock-product" type="hidden"><input id="main-stock-name" type="hidden">
+          <label>Stock-take value<input id="main-stock-quantity" type="number" min="0" step="1" required placeholder="Enter current stock"></label>
+          <button id="main-stock-submit" type="submit">Update main stock</button>
+        </form>
+        <div id="main-stock-notice" class="notice" role="status"></div>
+      </div>
+      <div class="panel transfer-panel">
+        <div class="branch-load-row">
+          <label class="selected-branch">Selected branch<select id="selected-branch" required><option value="">Loading branches...</option></select></label>
+          <button id="load-stock-button" class="load-stock-button" type="button">Load stock</button>
+          <button id="refresh-stock-button" class="refresh-stock-button" type="button">Refresh figures</button>
+        </div>
+        <form id="transfer-form" class="transfer-form">
+          <label>Product<input id="transfer-search" type="search" list="transfer-products" required placeholder="Type product name"><datalist id="transfer-products"></datalist></label>
+          <input id="transfer-product" type="hidden"><input id="transfer-name" type="hidden">
+          <label>Quantity<input id="transfer-quantity" type="number" min="1" step="1" required></label>
+          <button id="transfer-submit" type="submit">Send stock to branch</button>
+        </form>
+        <div id="transfer-notice" class="notice" role="status"></div>
+      </div>
+      </div>
+      <div id="products-panel" class="panel panel-wide product-browser">
+        <div class="browser-heading"><div class="browser-actions"><span id="product-catalog-status" class="catalog-status">Select a branch to load products.</span></div></div>
+        <label>Search products<input id="branch-product-search" type="search" placeholder="Search products by name, code, or barcode" autocomplete="off"></label>
+        <div id="branch-products" class="stock-table-wrap"><p class="empty">Select a branch to see its products.</p></div>
+      </div>
+      <div id="stock-activity-panel" class="panel panel-wide">
+        <div class="browser-heading"><div><h2>Stock activity</h2><p class="sub">The newest stock movements for the selected branch.</p></div><div class="browser-actions"><label class="activity-branch-label">Branch<select id="activity-branch"><option value="">Select branch</option></select></label><span id="movement-status" class="catalog-status">Select a branch.</span></div></div>
+        <div id="stock-movements" class="stock-table-wrap"><p class="empty">Loading stock activity...</p></div>
+      </div>
+      <div class="panel panel-wide">
+        <div class="browser-heading"><div><h2>Stock transfer log</h2><p class="sub">Every transfer sent from main stock to a branch.</p></div><span id="transfer-status" class="catalog-status">Loading transfers...</span></div>
+        <div id="stock-transfers" class="stock-table-wrap"><p class="empty">Loading transfer log...</p></div>
+      </div>
+    </section>
+  </main>
+</div>
+<button id="section-jump-button" class="section-jump-button" type="button" aria-label="Go to stock activity">Stock activity</button>
+<script>
+  const selectedBranch = document.querySelector('#selected-branch');
+  const loadStockButton = document.querySelector('#load-stock-button');
+  const selectedBranchKey = 'lora-selected-branch';
+  const productCatalogStatus = document.querySelector('#product-catalog-status');
+  const refreshStockButton = document.querySelector('#refresh-stock-button');
+  const branchProductSearch = document.querySelector('#branch-product-search');
+  const branchProducts = document.querySelector('#branch-products');
+  const stockMovements = document.querySelector('#stock-movements');
+  const productsPanel = document.querySelector('#products-panel');
+  const stockActivityPanel = document.querySelector('#stock-activity-panel');
+  const sectionJumpButton = document.querySelector('#section-jump-button');
+  const activityBranch = document.querySelector('#activity-branch');
+  const movementStatus = document.querySelector('#movement-status');
+  const stockTransfers = document.querySelector('#stock-transfers');
+  const transferStatus = document.querySelector('#transfer-status');
+  const mainStockForm = document.querySelector('#main-stock-form');
+  const mainStockNotice = document.querySelector('#main-stock-notice');
+  const mainStockSubmit = document.querySelector('#main-stock-submit');
+  const transferForm = document.querySelector('#transfer-form');
+  const transferNotice = document.querySelector('#transfer-notice');
+  const transferSubmit = document.querySelector('#transfer-submit');
+  let branchCatalogProducts = [];
+  let mainCatalogProducts = [];
+  let branchProductsLoading = false;
+  let branchProductsRefreshQueued = false;
+  let stockMovementsLoading = false;
+  let stockTransfersLoading = false;
+  let refreshAllLoading = false;
+  const productSearches = [
+    { source: 'branch', input: document.querySelector('#main-stock-search'), list: document.querySelector('#main-stock-products'), id: document.querySelector('#main-stock-product'), name: document.querySelector('#main-stock-name') },
+    { source: 'main', input: document.querySelector('#transfer-search'), list: document.querySelector('#transfer-products'), id: document.querySelector('#transfer-product'), name: document.querySelector('#transfer-name') },
+  ];
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+  const productOptions = products => products.map(product => `<option value="${escapeHtml(product.product_name)}" label="ID ${escapeHtml(product.product_id)}${product.product_code ? ` · ${escapeHtml(product.product_code)}` : ''}"></option>`).join('');
+  function selectProduct(product) {
+    productSearches.forEach(control => {
+      const selected = control.source === 'main'
+        ? mainCatalogProducts.find(item => String(item.product_id) === String(product.product_id)) || product
+        : product;
+      control.input.value = selected.product_name;
+      control.id.value = selected.product_id;
+      control.name.value = selected.product_name;
+    });
+    document.querySelector('#transfer-quantity').focus();
+  }
+  function renderBranchProducts() {
+    const query = branchProductSearch.value.trim().toLowerCase();
+    const products = branchCatalogProducts.filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(query)));
+    branchProducts.innerHTML = products.length
+      ? `<table class="stock-table"><thead><tr><th>Product</th><th>Selling price</th><th>Branch available</th><th>Sent</th><th>Sold</th><th></th></tr></thead><tbody>${products.map(product => `<tr><td class="product-name">${escapeHtml(product.product_name)}</td><td>${escapeHtml(product.selling_price)}</td><td><strong>${escapeHtml(product.available_quantity)}</strong></td><td>${escapeHtml(product.sent_quantity)}</td><td>${escapeHtml(product.sold_quantity)}</td><td><button type="button" data-product-id="${escapeHtml(product.product_id)}">Select</button></td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty">No products match your search.</p>';
+  }
+  async function loadBranchProducts(showLoading = true) {
+    if (branchProductsLoading) {
+      if (showLoading) branchProductsRefreshQueued = true;
+      return;
+    }
+    const branch = selectedBranch.value;
+    branchProductsLoading = true;
+    if (showLoading) {
+      loadStockButton.disabled = true;
+      loadStockButton.textContent = 'Loading products...';
+      loadStockButton.setAttribute('aria-busy', 'true');
+    }
+    if (!branch) {
+      branchCatalogProducts = [];
+      branchProducts.innerHTML = '<p class="empty">Select a branch to see its products.</p>';
+      productCatalogStatus.textContent = 'Select a branch to load products.';
+      branchProductsLoading = false;
+      loadStockButton.disabled = false;
+      loadStockButton.textContent = 'Load stock';
+      loadStockButton.setAttribute('aria-busy', 'false');
+      return;
+    }
+    if (showLoading) productCatalogStatus.textContent = 'Loading products...';
+    try {
+      const response = await fetch(`/api/stock/summary/?branch=${encodeURIComponent(branch)}&_=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Products could not be loaded.');
+      branchCatalogProducts = data.products || [];
+      document.querySelector('#main-stock-products').innerHTML = productOptions(branchCatalogProducts);
+      productCatalogStatus.textContent = `${branchCatalogProducts.length} products updated for ${branch}.`;
+      renderBranchProducts();
+    } catch (error) {
+      productCatalogStatus.textContent = branchCatalogProducts.length
+        ? `Refresh failed; showing the last ${branchCatalogProducts.length} products.`
+        : 'Products unavailable.';
+    } finally {
+      branchProductsLoading = false;
+      loadStockButton.disabled = false;
+      loadStockButton.textContent = 'Load stock';
+      loadStockButton.setAttribute('aria-busy', 'false');
+      if (branchProductsRefreshQueued) {
+        branchProductsRefreshQueued = false;
+        loadBranchProducts(true);
+      }
+    }
+  }
+  async function loadMainCatalogProducts() {
+    try {
+      const response = await fetch(`/api/products/?branch=MAIN&_=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Main products could not be loaded.');
+      mainCatalogProducts = data.products || [];
+      document.querySelector('#transfer-products').innerHTML = productOptions(mainCatalogProducts);
+    } catch (error) {
+      mainCatalogProducts = [];
+      document.querySelector('#transfer-products').innerHTML = '';
+    }
+  }
+  refreshStockButton.addEventListener('click', () => loadBranchProducts(true));
+  function requestBranchLoad() {
+    loadStockButton.disabled = true;
+    loadStockButton.textContent = 'Loading products...';
+    loadStockButton.setAttribute('aria-busy', 'true');
+    productCatalogStatus.textContent = 'Loading products...';
+    loadBranchProducts(true);
+  }
+  async function loadStockMovements() {
+    if (stockMovementsLoading) return;
+    if (!activityBranch.value) {
+      movementStatus.textContent = 'Select a branch.';
+      stockMovements.innerHTML = '<p class="empty">Select a branch to view stock activity.</p>';
+      return;
+    }
+    const branch = activityBranch.value;
+    stockMovementsLoading = true;
+    try {
+      const response = await fetch(`/api/stock/movements/?branch=${encodeURIComponent(branch)}&_=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Stock activity unavailable.');
+      const movements = data.movements || [];
+      movementStatus.textContent = `${movements.length} movement${movements.length === 1 ? '' : 's'}`;
+      stockMovements.innerHTML = movements.length
+        ? `<table class="movement-table"><thead><tr><th>Product</th><th>Type</th><th>Quantity</th><th>Source</th><th>Date</th></tr></thead><tbody>${movements.map(movement => `<tr><td>${escapeHtml(movement.product_name)}<small>ID ${escapeHtml(movement.product_id)}</small></td><td class="${escapeHtml(movement.movement_type)}">${escapeHtml(movement.movement_type)}</td><td>${escapeHtml(movement.quantity)}</td><td>${escapeHtml(movement.source)}</td><td>${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(movement.created_at)))}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="empty">No stock movements recorded yet.</p>';
+    } catch (error) {
+      movementStatus.textContent = 'Activity unavailable.';
+      stockMovements.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+    } finally {
+      stockMovementsLoading = false;
+    }
+  }
+  async function loadStockTransfers() {
+    if (stockTransfersLoading) return;
+    stockTransfersLoading = true;
+    try {
+      const response = await fetch(`/api/stock/transfers/log/?_=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Transfer log unavailable.');
+      const transfers = data.transfers || [];
+      transferStatus.textContent = `${transfers.length} transfer${transfers.length === 1 ? '' : 's'}`;
+      stockTransfers.innerHTML = transfers.length
+        ? `<table class="transfer-table"><thead><tr><th>Branch</th><th>Product</th><th>Quantity</th><th>Status</th><th>Sent by</th><th>Created</th><th>Completed</th></tr></thead><tbody>${transfers.map(transfer => `<tr><td>${escapeHtml(transfer.branch)}</td><td>${escapeHtml(transfer.product_name)}<small>ID ${escapeHtml(transfer.product_id)}</small></td><td>${escapeHtml(transfer.quantity)}</td><td><span class="transfer-status ${escapeHtml(transfer.status)}">${escapeHtml(transfer.status)}</span></td><td>${escapeHtml(transfer.created_by)}</td><td>${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(transfer.created_at)))}</td><td>${transfer.completed_at ? escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(transfer.completed_at))) : '-'}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="empty">No stock transfers recorded yet.</p>';
+    } catch (error) {
+      transferStatus.textContent = 'Log unavailable.';
+      stockTransfers.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+    } finally {
+      stockTransfersLoading = false;
+    }
+  }
+  async function refreshBranches() {
+    try {
+      const currentBranch = selectedBranch.value || localStorage.getItem(selectedBranchKey) || '';
+      const response = await fetch(`/api/branches/?_=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      const branches = data.branches || [];
+      const availableBranches = branches.filter(branch => branch.online === true);
+      const branchOptions = availableBranches.length ? '<option value="">Select branch</option>' + availableBranches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('') : '<option value="">No online branches</option>';
+      selectedBranch.innerHTML = branchOptions;
+      activityBranch.innerHTML = branchOptions;
+      if (currentBranch && [...selectedBranch.options].some(option => option.value === currentBranch)) selectedBranch.value = currentBranch;
+      if (currentBranch && [...activityBranch.options].some(option => option.value === currentBranch)) activityBranch.value = currentBranch;
+    } catch (error) {
+      if (!selectedBranch.options.length) selectedBranch.innerHTML = '<option value="">Branches unavailable</option>';
+      if (!activityBranch.options.length) activityBranch.innerHTML = '<option value="">Branches unavailable</option>';
+    }
+  }
+  function setupProductSearch(control) {
+    let products = [];
+    let timer;
+    control.input.addEventListener('input', () => {
+      control.id.value = ''; control.name.value = '';
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const query = control.input.value.trim();
+        const sourceBranch = control.source === 'main' ? 'MAIN' : selectedBranch.value;
+        if (!sourceBranch) { control.list.innerHTML = ''; return; }
+        if (query.length < 2) { control.list.innerHTML = ''; return; }
+        try {
+          const response = await fetch(`/api/products/?q=${encodeURIComponent(query)}&branch=${encodeURIComponent(sourceBranch)}&_=${Date.now()}`, { cache: 'no-store' });
+          const data = await response.json();
+          products = data.products || [];
+          control.list.innerHTML = productOptions(products);
+        } catch (error) { control.list.innerHTML = ''; }
+      }, 180);
+    });
+    control.input.addEventListener('change', () => {
+      const selected = [...products, ...(control.source === 'main' ? mainCatalogProducts : branchCatalogProducts)].find(product => product.product_name === control.input.value);
+      if (!selected) { control.id.value = ''; control.name.value = ''; return; }
+      control.id.value = selected.product_id;
+      control.name.value = selected.product_name;
+    });
+  }
+  branchProductSearch.addEventListener('input', renderBranchProducts);
+  branchProducts.addEventListener('click', event => {
+    const row = event.target.closest('[data-product-id]');
+    if (!row) return;
+    const product = branchCatalogProducts.find(item => String(item.product_id) === row.dataset.productId);
+    if (product) selectProduct(product);
+  });
+  sectionJumpButton.addEventListener('click', () => {
+    const target = document.querySelector(sectionJumpButton.dataset.target);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  const sectionObserver = new IntersectionObserver(entries => {
+    const visibleSection = entries.find(entry => entry.isIntersecting);
+    if (!visibleSection) return;
+    const showingProducts = visibleSection.target === productsPanel;
+    sectionJumpButton.textContent = showingProducts ? 'Stock activity' : 'Products';
+    sectionJumpButton.setAttribute('aria-label', showingProducts ? 'Go to stock activity' : 'Go to products');
+    sectionJumpButton.dataset.target = showingProducts ? '#stock-activity-panel' : '#products-panel';
+    sectionJumpButton.classList.add('visible');
+  }, { threshold: 0.35 });
+  sectionObserver.observe(productsPanel);
+  sectionObserver.observe(stockActivityPanel);
+  selectedBranch.addEventListener('change', () => {
+    localStorage.setItem(selectedBranchKey, selectedBranch.value);
+    productSearches.forEach(control => {
+      control.input.value = ''; control.id.value = ''; control.name.value = ''; control.list.innerHTML = '';
+    });
+    branchProductSearch.value = '';
+    activityBranch.value = selectedBranch.value;
+    requestBranchLoad();
+    loadStockMovements();
+  });
+  activityBranch.addEventListener('change', loadStockMovements);
+  loadStockButton.addEventListener('click', requestBranchLoad);
+  async function refreshAll() {
+    if (refreshAllLoading) return;
+    refreshAllLoading = true;
+    try {
+      await refreshBranches();
+      await Promise.all([loadMainCatalogProducts(), loadBranchProducts(false), loadStockMovements(), loadStockTransfers()]);
+    } finally {
+      refreshAllLoading = false;
+    }
+  }
+  mainStockForm.addEventListener('submit', async event => {
+    event.preventDefault(); mainStockSubmit.disabled = true; mainStockNotice.className = 'notice'; mainStockNotice.textContent = '';
+    try {
+      if (!selectedBranch.value) throw new Error('Select a connected branch first.');
+      if (!document.querySelector('#main-stock-product').value || !document.querySelector('#main-stock-name').value) throw new Error('Select a product from the branch stock list first.');
+      const response = await fetch('/api/stock/main/adjust/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ product_id:document.querySelector('#main-stock-product').value, product_name:document.querySelector('#main-stock-name').value, quantity:document.querySelector('#main-stock-quantity').value, branch:selectedBranch.value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Main stock could not be updated.');
+      mainStockNotice.className = 'notice ok'; mainStockNotice.textContent = `${document.querySelector('#main-stock-name').value} main and ${data.branch} stock: ${data.quantity}`; mainStockForm.reset(); await loadBranchProducts(); await loadStockMovements();
+    } catch (error) { mainStockNotice.className = 'notice error'; mainStockNotice.textContent = error.message; }
+    finally { mainStockSubmit.disabled = false; }
+  });
+  transferForm.addEventListener('submit', async event => {
+    event.preventDefault(); transferSubmit.disabled = true; transferNotice.className = 'notice'; transferNotice.textContent = '';
+    try {
+      const transferSearch = document.querySelector('#transfer-search');
+      const transferProduct = document.querySelector('#transfer-product');
+      const transferName = document.querySelector('#transfer-name');
+      const transferQuantity = document.querySelector('#transfer-quantity').value;
+      const typedProduct = mainCatalogProducts.find(product => product.product_name.trim().toLowerCase() === transferSearch.value.trim().toLowerCase());
+      if (typedProduct) {
+        transferProduct.value = typedProduct.product_id;
+        transferName.value = typedProduct.product_name;
+      }
+      if (!selectedBranch.value) throw new Error('Select a connected branch first.');
+      if (!transferProduct.value || !transferName.value) throw new Error('Select a product from the Main POS product list first.');
+      if (!Number.isFinite(Number(transferQuantity)) || Number(transferQuantity) <= 0) throw new Error('Enter a positive transfer quantity.');
+      const response = await fetch('/api/stock/transfers/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ product_id:document.querySelector('#transfer-product').value, product_name:document.querySelector('#transfer-name').value, quantity:document.querySelector('#transfer-quantity').value, branch:selectedBranch.value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Stock transfer could not be queued.');
+      transferNotice.className = 'notice ok'; transferNotice.textContent = `${data.transfer.product_name} transfer queued for ${data.transfer.branch}. The branch app will apply it on its next sync.`; transferForm.reset(); await loadBranchProducts(); await loadStockMovements(); await loadStockTransfers();
+    } catch (error) { transferNotice.className = 'notice error'; transferNotice.textContent = error.message; }
+    finally { transferSubmit.disabled = false; }
+  });
+  productSearches.forEach(setupProductSearch);
+  refreshAll();
+  setInterval(() => {
+    refreshBranches();
+    loadBranchProducts(false);
+    loadStockMovements();
+    loadStockTransfers();
+  }, 30000);
+</script>
+</body>
+</html>

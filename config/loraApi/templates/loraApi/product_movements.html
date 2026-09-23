@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lora | Product movement history</title>
+  <style>
+    :root { --ink:#182326; --muted:#6d7b7d; --line:#dbe3df; --paper:#f5f7f4; --white:#fff; --teal:#087f78; --teal-dark:#075d5a; --coral:#d95f4d; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:Georgia, 'Times New Roman', serif; }
+    .shell { min-height:100vh; background:radial-gradient(circle at 90% 0, #dceee7 0, transparent 34%), linear-gradient(135deg, #f8faf7 0, #edf3ef 100%); }
+    header, main { max-width:1100px; margin:auto; padding-left:28px; padding-right:28px; }
+    header { display:flex; justify-content:space-between; align-items:end; gap:24px; padding-top:42px; padding-bottom:30px; }
+    .eyebrow { margin:0 0 8px; color:var(--teal); font:700 12px/1.2 Arial,sans-serif; letter-spacing:2px; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(34px, 5vw, 58px); line-height:.95; font-weight:500; }
+    .nav { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:flex-end; }
+    .nav a, .logout-button { color:var(--teal-dark); font:700 12px Arial,sans-serif; letter-spacing:1px; text-decoration:none; text-transform:uppercase; }
+    .logout-form { display:inline; margin:0; }
+    .logout-button { padding:0; background:none; border:0; cursor:pointer; }
+    .nav a:hover, .logout-button:hover { color:var(--coral); }
+    main { padding-bottom:54px; }
+    .intro { margin:0 0 22px; color:var(--muted); font:14px/1.5 Arial,sans-serif; }
+    .panel { background:var(--white); border:1px solid var(--line); padding:26px; box-shadow:0 12px 35px rgba(28,62,54,.06); }
+    .filters { display:grid; grid-template-columns:minmax(220px, 1.5fr) 1fr 1fr auto auto; gap:14px; align-items:end; }
+    label { display:flex; flex-direction:column; gap:7px; color:#435153; font:700 11px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
+    input, select { width:100%; height:46px; padding:12px 13px; color:var(--ink); background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; outline:none; font:16px Georgia,serif; }
+    input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
+    button { height:46px; padding:0 16px; color:#fff; background:var(--coral); border:0; border-radius:2px; cursor:pointer; font:700 12px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
+    button:hover { background:#bd4e3e; }
+    .status { min-height:22px; margin:18px 0 0; color:var(--muted); font:13px Arial,sans-serif; }
+    .table-wrap { overflow-x:auto; margin-top:18px; border:1px solid var(--line); }
+    table { width:100%; min-width:820px; border-collapse:collapse; }
+    th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    td { padding:13px; border-bottom:1px solid var(--line); font:14px Arial,sans-serif; }
+    tr:last-child td { border-bottom:0; }
+    .product { font:16px Georgia,serif; }
+    .received { color:var(--teal-dark); font-weight:700; }
+    .sold { color:#a53b2e; font-weight:700; }
+    .empty { padding:22px; color:var(--muted); font:14px Arial,sans-serif; }
+    @media (max-width:800px) { header { display:block; padding-top:28px; padding-bottom:24px; } .nav { justify-content:flex-start; margin-top:20px; } main { padding-left:16px; padding-right:16px; } .panel { padding:20px; } .filters { grid-template-columns:1fr 1fr; } .filters label:first-child { grid-column:1/-1; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div><p class="eyebrow">Lora operations</p><h1>Product movements</h1></div>
+    <nav class="nav"><a href="/stock/">Main stock</a><a href="/">Sale control</a><a href="/history/">Cancellation history</a><form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></nav>
+  </header>
+  <main>
+    <p class="intro">Trace when stock was added or sold, how much changed, and who or what recorded the movement.</p>
+    <section class="panel">
+      <form id="movement-filters" class="filters">
+        <label>Branch<select id="branch-select"><option value="">Select branch first</option></select></label>
+        <label>Product name<input id="product-query" type="search" list="movement-products" placeholder="Select product name" autocomplete="off" required><datalist id="movement-products"></datalist></label>
+        <label>From date<input id="from-date" type="date"></label>
+        <label>To date<input id="to-date" type="date"></label>
+        <button type="submit">Search</button>
+      </form>
+      <p id="movement-status" class="status">Loading movements...</p>
+      <div id="movement-table" class="table-wrap"><p class="empty">Loading movements...</p></div>
+    </section>
+  </main>
+</div>
+<script>
+  const filters = document.querySelector('#movement-filters');
+  const branchSelect = document.querySelector('#branch-select');
+  const productQuery = document.querySelector('#product-query');
+  const movementProducts = document.querySelector('#movement-products');
+  const fromDate = document.querySelector('#from-date');
+  const toDate = document.querySelector('#to-date');
+  const movementStatus = document.querySelector('#movement-status');
+  const movementTable = document.querySelector('#movement-table');
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+  const today = new Date().toISOString().slice(0, 10);
+  fromDate.value = today;
+  toDate.value = today;
+  function renderMovements(movements) {
+    movementTable.innerHTML = movements.length
+      ? `<table><thead><tr><th>Product</th><th>Movement</th><th>Quantity</th><th>Stock balance</th><th>Branch</th><th>Added by / source</th><th>When</th></tr></thead><tbody>${movements.map(item => `<tr><td class="product">${escapeHtml(item.product_name)}<small> ID ${escapeHtml(item.product_id)}</small></td><td class="${escapeHtml(item.movement_type)}">${escapeHtml(item.movement_type)}</td><td>${escapeHtml(item.quantity)}</td><td><strong>${escapeHtml(item.balance)}</strong></td><td>${escapeHtml(item.branch)}</td><td>${escapeHtml(item.source)}</td><td>${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(item.created_at)))}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="empty">No movements match these filters.</p>';
+  }
+  async function loadMovements() {
+    if (!branchSelect.value) {
+      movementStatus.textContent = 'Select a branch to view movements.';
+      movementTable.innerHTML = '<p class="empty">No branch selected. Nothing to show.</p>';
+      return;
+    }
+    if (!productQuery.value.trim()) {
+      movementStatus.textContent = 'Select a product to view movements.';
+      movementTable.innerHTML = '<p class="empty">No product selected. Nothing to show.</p>';
+      return;
+    }
+    const params = new URLSearchParams({ branch: branchSelect.value, product: productQuery.value.trim(), from: fromDate.value, to: toDate.value, _: Date.now() });
+    movementStatus.textContent = 'Loading movements...';
+    try {
+      const response = await fetch(`/api/stock/movements/history/?${params}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Movement history unavailable.');
+      renderMovements(data.movements || []);
+      movementStatus.textContent = `${(data.movements || []).length} movement${data.movements?.length === 1 ? '' : 's'} found.`;
+    } catch (error) {
+      movementTable.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+      movementStatus.textContent = 'Movement history unavailable.';
+    }
+  }
+  async function loadBranches() {
+    try {
+      const response = await fetch('/api/branches/', { cache: 'no-store' });
+      const data = await response.json();
+      const branches = data.branches || [];
+      branchSelect.innerHTML = '<option value="">Select branch first</option><option value="MAIN">Main stock</option>' + branches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('');
+    } catch (error) {
+      branchSelect.innerHTML = '<option value="">Branches unavailable</option>';
+    }
+  }
+  async function loadProducts() {
+    movementProducts.innerHTML = '';
+    productQuery.value = '';
+    if (!branchSelect.value) return;
+    try {
+      const response = await fetch(`/api/products/?branch=${encodeURIComponent(branchSelect.value)}`, { cache: 'no-store' });
+      const data = await response.json();
+      movementProducts.innerHTML = (data.products || []).map(product => `<option value="${escapeHtml(product.product_name)}">Product ${escapeHtml(product.product_name)}</option>`).join('');
+    } catch (error) {
+      movementStatus.textContent = 'Products unavailable.';
+    }
+  }
+  filters.addEventListener('submit', event => { event.preventDefault(); loadMovements(); });
+  branchSelect.addEventListener('change', async () => { await loadProducts(); loadMovements(); });
+  loadBranches();
+  loadMovements();
+</script>
+</body>
+</html>

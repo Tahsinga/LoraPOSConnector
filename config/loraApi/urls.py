@@ -2,6 +2,8 @@ from django.urls import path
 from .views import (
     branch_status, branch_sync, cancel_sale, health_check, main_sync,
     index, favicon, confirm_deletion, cancellation_history_api, request_sales_report, complete_sales_report,
+    adjust_main_stock, create_stock_transfer, complete_stock_transfer, product_catalog, sync_product_catalog,
+    product_sync_inbox, publish_product_catalog, stock_summary, stock_movements, product_movement_history_api, stock_transfer_logs, stock_transfer_device_logs, stock_movement_device_logs, record_branch_sales,
 )
 
 urlpatterns = [
@@ -15,4 +17,18 @@ urlpatterns = [
     path('cancellation-history/', cancellation_history_api, name='cancellation_history_api'),
     path('sales-report/', request_sales_report, name='request_sales_report'),
     path('sales-report/complete/', complete_sales_report, name='complete_sales_report'),
+    path('stock/main/adjust/', adjust_main_stock, name='adjust_main_stock'),
+    path('stock/transfers/', create_stock_transfer, name='create_stock_transfer'),
+    path('stock/transfers/complete/', complete_stock_transfer, name='complete_stock_transfer'),
+    path('stock/summary/', stock_summary, name='stock_summary'),
+    path('stock/movements/', stock_movements, name='stock_movements'),
+    path('stock/movements/history/', product_movement_history_api, name='product_movement_history_api'),
+    path('stock/transfers/log/', stock_transfer_logs, name='stock_transfer_logs'),
+    path('stock/transfers/device-log/', stock_transfer_device_logs, name='stock_transfer_device_logs'),
+    path('stock/movements/device-log/', stock_movement_device_logs, name='stock_movement_device_logs'),
+    path('stock/sales/', record_branch_sales, name='record_branch_sales'),
+    path('products/', product_catalog, name='product_catalog'),
+    path('products/sync/', sync_product_catalog, name='sync_product_catalog'),
+    path('products/inbox/', product_sync_inbox, name='product_sync_inbox'),
+    path('products/publish/', publish_product_catalog, name='publish_product_catalog'),
 ]

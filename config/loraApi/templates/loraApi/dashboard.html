@@ -36,6 +36,11 @@
     .branch-options.is-disabled { opacity:.55; pointer-events:none; }
     input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
     .wide { grid-column:1/-1; }
+    .selected-branch { margin:0 0 20px; padding:14px 16px; background:#e7f2ee; border:1px solid #c9ddd5; border-left:4px solid var(--teal); }
+    .selected-branch select { height:50px; font-size:18px; font-weight:600; }
+    .product-catalog-tools { display:flex; align-items:center; gap:12px; margin:0 0 18px; }
+    .product-catalog-tools button { grid-column:auto; margin:0; padding:11px 14px; }
+    .product-catalog-status { color:var(--muted); font:13px Arial,sans-serif; }
     .branch-all { grid-column:1/-1; flex-direction:row; align-items:center; gap:9px; }
     .branch-all input { width:17px; height:17px; margin:0; accent-color:var(--teal); }
     .branch-all span { color:var(--ink); font:700 12px Arial,sans-serif; letter-spacing:.6px; text-transform:none; }
@@ -68,7 +73,7 @@
 <div class="shell">
   <header>
     <div><p class="eyebrow">Lora operations</p><h1>Sale control</h1></div>
-    <div class="live"><a class="history-link" href="/history/">Cancellation history</a>{% if user.is_superuser %}<a class="history-link" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form><i class="dot"></i> Gateway online</div>
+    <div class="live"><a class="history-link" href="/stock/">Main stock</a><a class="history-link" href="/history/">Cancellation history</a>{% if user.is_superuser %}<a class="history-link" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form><i class="dot"></i> Gateway online</div>
   </header>
   <main>
     <section class="stats" aria-label="Queue status">

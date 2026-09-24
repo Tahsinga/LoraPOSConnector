@@ -50,6 +50,8 @@
     button:disabled { opacity:.6; cursor:wait; }
     .notice { min-height:22px; margin-top:14px; font:14px/1.4 Arial,sans-serif; }
     .notice.ok { color:var(--teal-dark); } .notice.error { color:#a53b2e; }
+    .reprint-button { display:block; width:100%; margin-top:12px; background:var(--teal); }
+    .reprint-button:hover { background:var(--teal-dark); }
     .queue { margin-top:20px; }
     .report-panel { grid-column:1; grid-row:2; margin-top:20px; }
     .queue { grid-column:2; grid-row:1; margin-top:0; }
@@ -89,6 +91,7 @@
           <label>Branch<select name="branch" id="branch" required><option value="">Loading branches...</option></select></label>
           <button id="submit" type="submit">Queue cancellation</button>
         </form>
+        <button id="reprint-submit" class="reprint-button" type="button">Reprint invoice</button>
         <div id="notice" class="notice" role="status"></div>
       </div>
       <div class="panel report-panel">
@@ -114,6 +117,7 @@
   const form = document.querySelector('#cancel-form');
   const notice = document.querySelector('#notice');
   const submit = document.querySelector('#submit');
+  const reprintSubmit = document.querySelector('#reprint-submit');
   const reportForm = document.querySelector('#report-form');
   const reportNotice = document.querySelector('#report-notice');
   const reportSubmit = document.querySelector('#report-submit');
@@ -179,6 +183,18 @@
       form.reset(); await refreshQueue();
     } catch (error) { notice.className = 'notice error'; notice.textContent = error.message; }
     finally { submit.disabled = false; }
+  });
+  reprintSubmit.addEventListener('click', async () => {
+    reprintSubmit.disabled = true; notice.className = 'notice'; notice.textContent = '';
+    const invoice = form.querySelector('[name="invoice"]').value.trim();
+    const branch = branchSelect.value;
+    try {
+      const response = await fetch('/api/invoice-reprint/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ invoice, branch }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Invoice reprint could not be queued.');
+      notice.className = 'notice ok'; notice.textContent = data.message + ' The branch desktop will print it on its next sync.';
+    } catch (error) { notice.className = 'notice error'; notice.textContent = error.message; }
+    finally { reprintSubmit.disabled = false; }
   });
   reportForm.addEventListener('submit', async event => {
     event.preventDefault(); reportSubmit.disabled = true; reportNotice.className = 'notice'; reportNotice.textContent = '';

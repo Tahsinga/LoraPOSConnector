@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import authenticate, get_user_model
 from django.core.management import call_command
 from loraApi.state_store import load_state
-from loraApi.models import MainStockBalance, ProductCatalog, StockMovement, StockTransfer
+from loraApi.models import InvoiceReprintRequest, MainStockBalance, ProductCatalog, StockMovement, StockTransfer
 import json
 
 
@@ -199,6 +199,32 @@ class StockTransferTests(TestCase):
 		self.assertEqual(second.status_code, 200)
 		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=999).available_quantity, 15)
 
+	def test_branch_price_changes_only_after_branch_confirmation(self):
+		ProductCatalog.objects.create(
+			branch='BranchA', product_id=999, product_name='Test Product', selling_price='10.00',
+		)
+		queued = self.client.post(
+			'/api/stock/prices/',
+			data=json.dumps({'branch': 'BranchA', 'product_id': 999, 'product_name': 'Test Product', 'selling_price': '12.50'}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(queued.status_code, 202)
+		catalog = ProductCatalog.objects.get(branch='BranchA', product_id=999)
+		self.assertEqual(catalog.selling_price, 10)
+		self.assertTrue(catalog.pending_price_update)
+
+		confirmed = self.client.post(
+			'/api/stock/prices/complete/',
+			data=json.dumps({'branch': 'BranchA', 'product_id': 999, 'success': True}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(confirmed.status_code, 200)
+		catalog.refresh_from_db()
+		self.assertEqual(catalog.selling_price, 12.5)
+		self.assertFalse(catalog.pending_price_update)
+
 	def test_stock_summary_counts_queued_transfer_as_sent(self):
 		ProductCatalog.objects.create(
 			branch='BranchA', product_id=999, product_name='Test Product', available_quantity=0,
@@ -255,6 +281,92 @@ class StockTransferTests(TestCase):
 		product = ProductCatalog.objects.get(branch='BranchA', product_id=1002)
 		self.assertEqual(product.product_name, 'Published Product')
 		self.assertEqual(product.available_quantity, 8)
+
+	def test_web_can_queue_branch_product_and_branch_can_acknowledge_it(self):
+		response = self.client.post(
+			'/api/products/create/',
+			data=json.dumps({
+				'branch': 'BranchA', 'product_name': 'New Branch Product',
+				'product_id': '12100001', 'product_code': 'NEW-001', 'barcode': '990001', 'initial_quantity': '8', 'selling_price': '4.25',
+			}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 202)
+		product_id = response.json()['product_id']
+		self.assertEqual(product_id, 12_100_001)
+		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=product_id).product_code, '12100002')
+		self.assertFalse(ProductCatalog.objects.get(branch='BranchA', product_id=product_id).branch_confirmed)
+		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=product_id).pending_stock_quantity, 8)
+		not_visible = self.client.get('/api/products/?branch=BranchA&q=New%20Branch%20Product')
+		self.assertEqual(not_visible.status_code, 200)
+		self.assertEqual(not_visible.json()['products'], [])
+
+		poll = self.client.get('/api/branch-sync/?branch=BranchA')
+		self.assertEqual(poll.status_code, 200)
+		self.assertEqual(poll.json()['pending_product_creations'][0]['product_name'], 'New Branch Product')
+		self.assertEqual(poll.json()['pending_product_creations'][0]['initial_quantity'], '8')
+
+		complete = self.client.post(
+			'/api/products/create/complete/',
+			data=json.dumps({'branch': 'BranchA', 'product_id': product_id, 'actual_product_id': 2001, 'success': True}),
+			content_type='application/json',
+		)
+		self.assertEqual(complete.status_code, 200)
+		product = ProductCatalog.objects.get(branch='BranchA', product_id=2001)
+		self.assertFalse(product.pending_product_creation)
+		self.assertTrue(product.branch_confirmed)
+		visible = self.client.get('/api/products/?branch=BranchA&q=New%20Branch%20Product')
+		self.assertEqual([item['product_id'] for item in visible.json()['products']], [2001])
+		main_products = self.client.get('/api/products/?branch=MAIN&q=New%20Branch%20Product')
+		self.assertEqual([item['product_id'] for item in main_products.json()['products']], [2001])
+		transfer = self.client.post(
+			'/api/stock/transfers/',
+			data=json.dumps({'branch': 'BranchA', 'product_id': 2001, 'product_name': 'New Branch Product', 'quantity': 6}),
+			content_type='application/json',
+		)
+		self.assertEqual(transfer.status_code, 202)
+		self.assertEqual(MainStockBalance.objects.get(product_id=2001).quantity, 6)
+
+	def test_web_rejects_main_as_branch_product_target(self):
+		response = self.client.post(
+			'/api/products/create/',
+			data=json.dumps({'branch': 'MAIN', 'product_name': 'Invalid Product', 'selling_price': '1.00'}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 400)
+
+	def test_web_rejects_duplicate_product_id_with_clear_message(self):
+		ProductCatalog.objects.create(branch='BranchA', product_id=12100002, product_name='Existing Product')
+		response = self.client.post(
+			'/api/products/create/',
+			data=json.dumps({'branch': 'BranchB', 'product_id': 12100002, 'product_name': 'Duplicate Product', 'selling_price': '1.00'}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 409)
+		self.assertIn('already queued', response.json()['message'])
+
+	def test_web_can_queue_and_branch_can_claim_invoice_reprint(self):
+		response = self.client.post(
+			'/api/invoice-reprint/',
+			data=json.dumps({'branch': 'BranchA', 'invoice': 'INV-100'}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 202)
+		poll = self.client.get('/api/branch-sync/?branch=BranchA')
+		self.assertEqual(poll.status_code, 200)
+		self.assertEqual(poll.json()['pending_invoice_reprints'][0]['invoice'], 'INV-100')
+		request_id = poll.json()['pending_invoice_reprints'][0]['request_id']
+		complete = self.client.post(
+			'/api/invoice-reprint/complete/',
+			data=json.dumps({'request_id': request_id, 'success': True}),
+			content_type='application/json',
+		)
+		self.assertEqual(complete.status_code, 200)
+		self.assertEqual(InvoiceReprintRequest.objects.get(request_id=request_id).status, 'completed')
 
 	def test_product_search_matches_code_barcode_and_id(self):
 		ProductCatalog.objects.create(

@@ -33,6 +33,18 @@
     .empty, .error { padding:28px 18px; color:var(--muted); font:14px Arial,sans-serif; text-align:center; }
     .error { color:#a53b2e; }
     .status { display:inline-block; padding:5px 8px; color:#176342; background:#dff2e7; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .open-button { height:32px; padding:0 11px; font-size:10px; }
+    .details { display:none; position:fixed; inset:0; z-index:30; align-items:center; justify-content:center; padding:24px; background:rgba(24,35,38,.48); font:14px/1.5 Arial,sans-serif; }
+    .details.is-open { display:flex; }
+    .details-card { width:min(680px, 100%); max-height:85vh; overflow:auto; padding:24px; background:var(--white); border:1px solid var(--line); box-shadow:0 18px 50px rgba(28,62,54,.25); }
+    .details h2 { margin:0 0 12px; font:500 24px Georgia,serif; }
+    .details-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px 20px; }
+    .details-grid strong { color:var(--muted); font-size:11px; letter-spacing:.8px; text-transform:uppercase; }
+    .receipt-lines { margin:16px 0; padding:12px; background:#f5f7f4; border:1px solid var(--line); }
+    .receipt-line { padding:6px 0; border-bottom:1px solid var(--line); }
+    .receipt-line:last-child { border-bottom:0; }
+    .receipt-total { margin-top:14px; font:700 16px Georgia,serif; }
+    .close-details { float:right; height:34px; padding:0 11px; font-size:10px; }
     @media (max-width:760px) { header { display:block; padding:28px 16px 24px; } .back { display:block; margin-top:20px; } main { padding:0 16px 36px; } .toolbar { display:block; } .filter { margin-top:16px; } input { flex:1; width:auto; } }
   </style>
 </head>
@@ -53,10 +65,11 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Invoice number</th><th>Branch</th><th>Deleted by</th><th>Cancelled date</th><th>Deleted rows</th><th>Status</th></tr></thead>
-        <tbody id="history"><tr><td colspan="6" class="empty">Loading saved cancellations...</td></tr></tbody>
+        <thead><tr><th>Invoice number</th><th>Branch</th><th>Deleted by</th><th>Cancelled date</th><th>Deleted rows</th><th>Status</th><th>Receipt</th></tr></thead>
+        <tbody id="history"><tr><td colspan="7" class="empty">Loading saved cancellations...</td></tr></tbody>
       </table>
     </div>
+    <section id="details" class="details" aria-live="polite"></section>
   </main>
 </div>
 <script>
@@ -64,6 +77,16 @@
   const summary = document.querySelector('#summary');
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const formatDate = value => new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(value));
+  const detailsPanel = document.querySelector('#details');
+  let cancellationRecords = new Map();
+  function openDetails(id) {
+    const item = cancellationRecords.get(id);
+    if (!item) return;
+    const products = Array.isArray(item.products) ? item.products : [];
+    const productLines = products.length ? products.map(product => `<div class="receipt-line">${escapeHtml(product.product_name || `Product ${product.product_id || ''}`)} x${escapeHtml(product.quantity ?? '')} @ ${escapeHtml(product.unit_price ?? '0.00')} = ${escapeHtml(product.total ?? '0.00')}</div>`).join('') : '<div class="receipt-line">Product details were not captured for this older cancellation.</div>';
+    detailsPanel.innerHTML = `<div class="details-card"><button class="close-details" type="button">Close</button><h2>Stored cancellation receipt</h2><div class="details-grid"><div><strong>Invoice</strong><br>${escapeHtml(item.invoice)}</div><div><strong>Branch</strong><br>${escapeHtml(item.branch)}</div><div><strong>Product ID</strong><br>${escapeHtml(item.product_id || 'All products')}</div><div><strong>Entry number</strong><br>${escapeHtml(item.entry_no || 'Not reported')}</div><div><strong>Deleted rows</strong><br>${escapeHtml(item.deleted_rows ?? 'Not reported')}</div><div><strong>Deleted by</strong><br>${escapeHtml(item.deleted_by)}</div><div><strong>Cancelled date</strong><br>${escapeHtml(formatDate(item.cancelled_at))}</div><div><strong>Source</strong><br>${escapeHtml(item.source)}</div></div><div class="receipt-lines">${productLines}</div><div class="receipt-total">Total returned: ${escapeHtml(item.total || '0.00')}</div><p>${escapeHtml(item.message || 'Cancellation confirmed and stored.')}</p></div>`;
+    detailsPanel.classList.add('is-open');
+  }
   async function loadHistory() {
     try {
       const branch = document.querySelector('#branch').value.trim();
@@ -76,13 +99,16 @@
       branchSelect.innerHTML = '<option value="">All branches</option>' + (data.branches || []).map(item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('');
       branchSelect.value = selectedBranch;
       summary.textContent = `${data.count} saved cancellation${data.count === 1 ? '' : 's'}, newest first`;
-      historyBody.innerHTML = data.cancellations.length ? data.cancellations.map(item => `<tr><td>${escapeHtml(item.invoice)}</td><td>${escapeHtml(item.branch)}</td><td>${escapeHtml(item.deleted_by)}</td><td>${escapeHtml(formatDate(item.cancelled_at))}</td><td>${item.deleted_rows ?? 'Not reported'}</td><td><span class="status">Confirmed</span></td></tr>`).join('') : '<tr><td colspan="6" class="empty">No cancelled invoices found.</td></tr>';
+      cancellationRecords = new Map(data.cancellations.map(item => [item.id, item]));
+      historyBody.innerHTML = data.cancellations.length ? data.cancellations.map(item => `<tr><td>${escapeHtml(item.invoice)}</td><td>${escapeHtml(item.branch)}</td><td>${escapeHtml(item.deleted_by)}</td><td>${escapeHtml(formatDate(item.cancelled_at))}</td><td>${item.deleted_rows ?? 'Not reported'}</td><td><span class="status">Confirmed</span></td><td><button class="open-button" type="button" data-cancellation-id="${escapeHtml(item.id)}">Open</button></td></tr>`).join('') : '<tr><td colspan="7" class="empty">No cancelled invoices found.</td></tr>';
     } catch (error) {
       summary.textContent = 'History unavailable';
       historyBody.innerHTML = `<tr><td colspan="6" class="error">${escapeHtml(error.message)}</td></tr>`;
     }
   }
   document.querySelector('#filter-form').addEventListener('submit', event => { event.preventDefault(); loadHistory(); });
+  historyBody.addEventListener('click', event => { const button = event.target.closest('[data-cancellation-id]'); if (button) openDetails(button.dataset.cancellationId); });
+  detailsPanel.addEventListener('click', event => { if (event.target === detailsPanel || event.target.closest('.close-details')) detailsPanel.classList.remove('is-open'); });
   loadHistory();
   setInterval(loadHistory, 30000);
 </script>

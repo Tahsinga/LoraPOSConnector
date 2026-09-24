@@ -13,6 +13,8 @@ class DeletionRecord(models.Model):
 	source = models.CharField(max_length=100, default='unknown')
 	deleted_from_main = models.BooleanField(default=False)
 	message = models.TextField(blank=True, default='')
+	receipt_products = models.TextField(blank=True, default='[]')
+	receipt_total = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
 	deleted_rows = models.IntegerField(null=True, blank=True)
 	deleted_by = models.CharField(max_length=255, blank=True, default='')
 	confirmed_branch = models.CharField(max_length=255, blank=True, null=True)
@@ -35,6 +37,20 @@ class SalesReportRequest(models.Model):
 
 	class Meta:
 		ordering = ['-requested_at']
+
+
+class InvoiceReprintRequest(models.Model):
+	request_id = models.CharField(max_length=255, primary_key=True)
+	branch = models.CharField(max_length=255)
+	invoice = models.CharField(max_length=255)
+	status = models.CharField(max_length=20, default='pending')
+	requested_by = models.CharField(max_length=255, blank=True, default='')
+	requested_at = models.DateTimeField(auto_now_add=True)
+	completed_at = models.DateTimeField(null=True, blank=True)
+	error_message = models.TextField(blank=True, default='')
+
+	class Meta:
+		ordering = ['requested_at']
 
 
 class MainStockBalance(models.Model):
@@ -88,6 +104,7 @@ class ProductCatalog(models.Model):
 	available_quantity = models.DecimalField(max_digits=18, decimal_places=0, default=0)
 	selling_price = models.DecimalField(max_digits=18, decimal_places=2, default=0)
 	sold_quantity = models.DecimalField(max_digits=18, decimal_places=0, null=True, blank=True)
+	branch_confirmed = models.BooleanField(default=True)
 	pending_price_update = models.BooleanField(default=False)
 	pending_selling_price = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
 	tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)

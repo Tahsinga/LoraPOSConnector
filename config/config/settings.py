@@ -26,14 +26,18 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-j#e+09ytj0=mmt_#(upoq
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*'] if DEBUG else [
-    host.strip()
-    for host in os.environ.get(
-        'ALLOWED_HOSTS',
-        'localhost,127.0.0.1,192.168.1.145,192.168.110.87,testserver,loraapi.onrender.com,lora-api.onrender.com',
-    ).split(',')
-    if host.strip()
-]
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    configured_hosts = [
+        host.strip()
+        for host in os.environ.get(
+            'ALLOWED_HOSTS',
+            'localhost,127.0.0.1,192.168.1.145,192.168.110.87,testserver',
+        ).split(',')
+        if host.strip()
+    ]
+    ALLOWED_HOSTS = sorted(set(configured_hosts + ['loraapi01.onrender.com']))
 
 
 # Application definition

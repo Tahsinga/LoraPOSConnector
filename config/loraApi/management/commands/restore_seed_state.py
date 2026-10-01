@@ -25,16 +25,20 @@ class Command(BaseCommand):
 
             user, created = User.objects.get_or_create(username=username)
             previous_superuser = user.is_superuser
-            user.set_password(password)
+            password_changed = not user.check_password(password)
+            role_changed = user.is_staff is not True or user.is_superuser != (username == 'Admin')
+            if password_changed:
+                user.set_password(password)
             user.is_staff = True
             user.is_superuser = (username == 'Admin')
-            user.save()
+            if created or password_changed or role_changed:
+                user.save()
 
             logger.info(
                 'Seed account sync: username=%s created=%s password_valid=%s is_staff=%s is_superuser=%s previous_superuser=%s',
                 username,
                 created,
-                user.check_password(password),
+                not password_changed,
                 user.is_staff,
                 user.is_superuser,
                 previous_superuser,

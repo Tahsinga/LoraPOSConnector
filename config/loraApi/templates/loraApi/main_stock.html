@@ -23,13 +23,17 @@
     .workspace { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
     .stock-actions { display:grid; grid-column:1/-1; grid-template-columns:minmax(0, 1fr); gap:20px; }
     .panel { background:var(--white); border:1px solid var(--line); padding:26px; box-shadow:0 12px 35px rgba(28,62,54,.06); }
+    .branch-data-card { position:relative; }
+    .branch-data-card.is-loading::before { content:''; position:absolute; inset:0; z-index:2; background:rgba(255,255,255,.72); }
+    .branch-data-card.is-loading::after { content:''; position:absolute; top:50%; left:50%; z-index:3; width:30px; height:30px; margin:-15px 0 0 -15px; border:3px solid #c9ddd5; border-top-color:var(--teal); border-radius:50%; animation:branch-card-spin .8s linear infinite; }
+    @keyframes branch-card-spin { to { transform:rotate(360deg); } }
     .panel-wide { grid-column:1/-1; }
     h2 { margin:0 0 5px; font-size:25px; font-weight:500; }
     .sub { margin:0 0 22px; color:var(--muted); font:14px/1.5 Arial,sans-serif; }
     form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     label { display:flex; flex-direction:column; gap:7px; color:#435153; font:700 11px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
     input, select { width:100%; height:46px; padding:12px 13px; color:var(--ink); background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; outline:none; font:16px Georgia,serif; }
-    input[type="number"] { -moz-appearance:textfield; }
+    input[type="number"] { appearance:textfield; -moz-appearance:textfield; }
     input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { margin:0; -webkit-appearance:none; }
     input:focus, select:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
     button { grid-column:1/-1; margin-top:5px; padding:14px 18px; color:#fff; background:var(--coral); border:0; border-radius:2px; cursor:pointer; font:700 12px Arial,sans-serif; letter-spacing:1.3px; text-transform:uppercase; }
@@ -39,13 +43,18 @@
     .browser-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
     .activity-branch-label { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; }
     .activity-branch-label select { width:auto; min-width:150px; }
+    .activity-date-label { flex-direction:row; align-items:center; gap:8px; white-space:nowrap; }
+    .activity-date-label input { width:auto; min-width:145px; }
     .catalog-status { color:var(--muted); font:13px Arial,sans-serif; }
     .refresh-stock-button { width:auto; margin:0; padding:9px 12px; background:var(--teal); }
     .refresh-stock-button:hover { background:var(--teal-dark); }
     .selected-branch { margin:0 0 20px; padding:14px 16px; background:#e7f2ee; border:1px solid #c9ddd5; border-left:4px solid var(--teal); }
+    .selected-branch-name { display:block; margin-top:7px; color:var(--ink); font:600 18px Georgia,serif; letter-spacing:0; text-transform:none; }
     .selected-branch select { height:50px; font-size:18px; font-weight:600; }
-    .branch-load-row { display:flex; gap:10px; align-items:end; margin-bottom:20px; }
-    .branch-load-row .selected-branch { flex:1; margin:0; }
+    .branch-load-row { display:flex; flex-direction:column; gap:10px; align-items:stretch; margin-bottom:20px; }
+    .branch-load-row .selected-branch { margin:0; }
+    .branch-load-actions { display:flex; gap:10px; align-items:center; }
+    .branch-selector { display:block; }
     .load-stock-button { flex:0 0 auto; width:auto; margin:0; padding:14px 16px; background:var(--teal); }
     .load-stock-button:hover { background:var(--teal-dark); }
     .transfer-form { margin-top:20px; padding-top:20px; border-top:1px solid var(--line); }
@@ -54,12 +63,26 @@
     .transfer-panel .sub { margin-bottom:8px; }
     .transfer-panel .branch-load-row { margin-bottom:8px; }
     .transfer-panel .selected-branch { padding:6px 10px; }
-    .transfer-panel .selected-branch select { height:36px; padding:6px 11px; font-size:15px; line-height:1.2; }
+    .transfer-panel .branch-selector select { height:36px; padding:6px 11px; font-size:15px; line-height:1.2; }
     .transfer-panel .load-stock-button { padding:10px 13px; }
     .transfer-panel .transfer-form { grid-template-columns:minmax(0, 1.5fr) minmax(150px, .75fr) auto; align-items:end; gap:10px; margin-top:8px; padding-top:8px; }
     .transfer-panel .transfer-form input { height:40px; padding:8px 11px; }
     .transfer-panel .transfer-form button { grid-column:auto; margin-top:0; padding:10px 14px; white-space:nowrap; }
     .transfer-panel .notice { min-height:0; margin-top:8px; }
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:10px 0 18px; padding:10px 12px; background:#f3f9f8; border:1px solid #d8e9e4; border-radius:6px; }
+    .toggle-row .toggle-label { color:var(--ink); font:700 12px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
+    .toggle-button { width:auto; min-width:220px; margin:0; padding:10px 14px; color:var(--teal-dark); background:#dbe8e4; border:1px solid #b9d0ca; border-radius:4px; cursor:pointer; font:700 11px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
+    .toggle-button:hover { color:#fff; background:var(--teal); }
+    .toggle-button.is-on { color:#fff; background:var(--teal); border-color:var(--teal-dark); }
+    .product-picker { position:relative; }
+    .product-picker-options { position:absolute; top:calc(100% + 4px); right:0; left:0; z-index:10; display:none; max-height:280px; overflow:auto; padding:4px; background:#202020; border:1px solid #444; border-radius:6px; box-shadow:0 10px 24px rgba(0,0,0,.25); }
+    .product-picker-options.is-open { display:grid; gap:2px; }
+    .product-picker-option { display:block; width:100%; margin:0; padding:9px 10px; color:#fff; background:transparent; border:0; border-radius:3px; text-align:left; text-transform:none; letter-spacing:0; font:13px Arial,sans-serif; }
+    .product-picker-option:hover, .product-picker-option:focus { background:#3a3a3a; outline:none; }
+    .product-picker-option strong { display:block; font-size:13px; }
+    .product-picker-option small { display:block; margin-top:3px; color:#c7c7c7; font-size:11px; }
+    .branch-product-form-wrap { display:none; margin-top:4px; }
+    .branch-product-form-wrap.is-open { display:block; }
     .product-list { display:grid; gap:8px; max-height:360px; overflow:auto; margin-top:14px; }
     .product-row { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:16px; align-items:center; width:100%; margin:0; padding:12px 14px; color:var(--ink); background:#fbfcfa; border:1px solid var(--line); text-align:left; text-transform:none; letter-spacing:0; }
     .product-row:hover { color:var(--ink); background:#e7f2ee; border-color:#9dcac0; }
@@ -67,12 +90,26 @@
     .product-row small { display:block; margin-top:4px; color:var(--muted); font:12px Arial,sans-serif; }
     .product-row span { color:var(--teal-dark); font:700 11px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
     .stock-table-wrap { overflow-x:auto; margin-top:16px; border:1px solid var(--line); }
+    .loading-state { display:flex; align-items:center; justify-content:center; gap:10px; min-height:120px; }
+    .loading-spinner { display:inline-block; width:22px; height:22px; border:3px solid #c9ddd5; border-top-color:var(--teal); border-radius:50%; animation:branch-card-spin .8s linear infinite; }
     .stock-table { width:100%; min-width:680px; border-collapse:collapse; }
     .stock-table th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
     .stock-table td { padding:13px; border-bottom:1px solid var(--line); font:14px Arial,sans-serif; }
     .stock-table tr:last-child td { border-bottom:0; }
     .stock-table .product-name { font:16px Georgia,serif; }
     .stock-table button { margin:0; padding:8px 10px; font-size:10px; }
+    .stock-table .delete-product-button { margin-left:6px; color:#fff; background:#9c352b; }
+    .stock-table .delete-product-button:hover { background:#76271f; }
+    .stock-table .tax-rate-form { display:flex; align-items:center; gap:6px; margin:0; }
+    .stock-table .tax-rate-form input { width:86px; height:34px; padding:6px 8px; }
+    .stock-table .tax-rate-form button { width:auto; margin:0; padding:8px 10px; background:var(--teal); white-space:nowrap; }
+    .product-delete-dialog { width:min(440px, calc(100% - 32px)); padding:24px; color:var(--ink); background:var(--white); border:1px solid var(--line); box-shadow:0 18px 60px rgba(0,0,0,.24); }
+    .product-delete-dialog::backdrop { background:rgba(15,29,28,.52); }
+    .product-delete-dialog form { grid-template-columns:1fr; gap:12px; margin:0; }
+    .product-delete-dialog h2, .product-delete-dialog p { margin:0; }
+    .product-delete-dialog .product-delete-actions { display:flex; justify-content:flex-end; gap:8px; }
+    .product-delete-dialog .product-delete-actions button { width:auto; grid-column:auto; margin:0; padding:11px 14px; }
+    .product-delete-dialog .product-delete-cancel { color:var(--ink); background:#e8eeea; }
     .empty { margin:0; padding:18px 0 4px; color:var(--muted); font:14px Arial,sans-serif; }
     .movement-table { width:100%; border-collapse:collapse; min-width:620px; }
     .movement-table th { padding:11px 13px; color:var(--muted); border-bottom:1px solid var(--line); text-align:left; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
@@ -87,20 +124,56 @@
     .transfer-status { display:inline-block; padding:5px 8px; color:#176342; background:#dff2e7; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
     .transfer-status.processing { color:#78570b; background:#fff1c7; }
     .transfer-status.failed { color:#a53b2e; background:#f9dfda; }
+    .transfer-queue { margin-top:12px; border:1px solid var(--line); background:#fbfaf6; }
+    .transfer-queue:empty { display:none; }
+    .transfer-queue-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-bottom:1px solid var(--line); font:13px Arial,sans-serif; }
+    .transfer-queue-item:last-child { border-bottom:0; }
+    .transfer-queue-product { color:var(--ink); font-weight:700; }
+    .transfer-queue-detail { color:var(--muted); font-size:11px; }
+    .transfer-queue-state { flex:none; padding:4px 7px; color:#78570b; background:#fff1c7; font:700 10px Arial,sans-serif; letter-spacing:.6px; text-transform:uppercase; }
+    .transfer-queue-state.sending { color:#176342; background:#dff2e7; }
     .notice { min-height:22px; margin-top:14px; font:14px/1.4 Arial,sans-serif; }
     .notice.ok { color:var(--teal-dark); } .notice.error { color:#a53b2e; }
     .section-jump-button { display:none; position:fixed; right:24px; bottom:24px; z-index:20; width:auto; margin:0; padding:12px 16px; color:#fff; background:var(--teal-dark); border:1px solid rgba(255,255,255,.35); border-radius:999px; box-shadow:0 10px 24px rgba(28,62,54,.2); grid-column:auto; }
     .section-jump-button.visible { display:block; }
     .section-jump-button:hover { background:var(--coral); }
     #products-panel, #stock-activity-panel { scroll-margin-top:24px; }
-    @media (max-width:760px) { header { display:block; padding:28px 16px 24px; } .nav { justify-content:flex-start; margin-top:20px; gap:10px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel, .panel-wide { grid-column:auto; padding:20px; } form { grid-template-columns:1fr; } .transfer-panel .transfer-form { grid-template-columns:1fr; } .transfer-panel .transfer-form button { grid-column:1/-1; } button { grid-column:auto; } .browser-heading { display:block; } .catalog-status { display:block; margin-top:8px; } .product-row { grid-template-columns:1fr; gap:8px; } }
+    @media (max-width:760px) {
+      header { display:block; padding:24px 14px 20px; }
+      h1 { font-size:40px; white-space:normal; }
+      .nav { justify-content:flex-start; gap:10px 14px; margin-top:18px; }
+      .nav-link, .logout-button { font-size:11px; }
+      main { padding:0 12px 32px; }
+      .intro { font-size:13px; }
+      .workspace { grid-template-columns:1fr; gap:12px; }
+      .panel, .panel-wide { grid-column:auto; padding:16px; }
+      h2 { font-size:22px; }
+      .sub { font-size:13px; margin-bottom:16px; }
+      form, .transfer-panel .transfer-form { grid-template-columns:1fr; gap:11px; }
+      input, select { height:44px; font-size:16px; }
+      button, .transfer-panel .transfer-form button { width:100%; min-height:44px; grid-column:1/-1; margin-top:0; }
+      .branch-load-row { gap:10px; }
+      .branch-load-actions { flex-direction:column; gap:8px; }
+      .branch-load-actions button { width:100%; }
+      .toggle-row { flex-direction:column; align-items:stretch; gap:9px; margin:10px 0 14px; }
+      .toggle-button { width:100%; min-width:0; }
+      .browser-heading { display:block; }
+      .browser-actions { display:grid; grid-template-columns:1fr; gap:10px; justify-content:stretch; }
+      .activity-branch-label, .activity-date-label { display:flex; flex-direction:column; align-items:stretch; gap:6px; white-space:normal; }
+      .activity-branch-label select, .activity-date-label input { width:100%; min-width:0; }
+      .catalog-status { display:block; margin-top:8px; }
+      .stock-table, .movement-table, .transfer-table { font-size:12px; }
+      .stock-table th, .stock-table td, .movement-table th, .movement-table td, .transfer-table th, .transfer-table td { padding:10px 9px; }
+      .stock-table .product-name { font-size:14px; }
+      .section-jump-button { right:12px; bottom:12px; }
+    }
   </style>
 </head>
 <body>
 <div class="shell">
   <header>
     <div class="page-title"><p class="eyebrow">Lora operations</p><h1>Main stock</h1></div>
-    <nav class="nav"><a class="nav-link" href="/stock/movements/history/">Product movements</a><a class="nav-link" href="/">Sale control</a><a class="nav-link" href="/history/">Cancellation history</a>{% if user.is_superuser %}<a class="nav-link" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></nav>
+    <nav class="nav"><a class="nav-link" href="/products/deleted/">Deleted products</a><a class="nav-link" href="/stock/movements/history/">Product movements</a><a class="nav-link" href="/">Sale control</a><a class="nav-link" href="/history/">Cancellation history</a>{% if user.is_superuser %}<a class="nav-link" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form></nav>
   </header>
   <main>
     <p class="intro">Update central stock or send stock to a connected branch.</p>
@@ -110,42 +183,85 @@
         <h2>Update main stock</h2>
         <p class="sub">Enter the exact stock-take value for this product.</p>
         <form id="main-stock-form">
-          <label>Product<input id="main-stock-search" type="search" list="main-stock-products" required placeholder="Type product name"><datalist id="main-stock-products"></datalist></label>
+          <label class="product-picker">Product<input id="main-stock-search" type="search" autocomplete="off" required placeholder="Type product name"><datalist id="main-stock-products"></datalist><div id="main-stock-product-options" class="product-picker-options" role="listbox"></div></label>
           <input id="main-stock-product" type="hidden"><input id="main-stock-name" type="hidden">
           <label>Stock-take value<input id="main-stock-quantity" type="number" min="0" step="1" required placeholder="Enter current stock"></label>
           <button id="main-stock-submit" type="submit">Update main stock</button>
         </form>
         <div id="main-stock-notice" class="notice" role="status"></div>
+        <div id="main-stock-queue" class="transfer-queue" aria-live="polite" aria-label="Stock takes waiting to be updated"></div>
       </div>
-      <div class="panel transfer-panel">
+      <div class="panel transfer-panel branch-data-card" data-branch-loading-card>
         <div class="branch-load-row">
-          <label class="selected-branch">Selected branch<select id="selected-branch" required><option value="">Loading branches...</option></select></label>
-          <button id="load-stock-button" class="load-stock-button" type="button">Load stock</button>
-          <button id="refresh-stock-button" class="refresh-stock-button" type="button">Refresh figures</button>
+          <div class="selected-branch">
+            <span>Selected branch</span>
+            <span id="selected-branch-name" class="selected-branch-name">Loading branches...</span>
+          </div>
+          <label class="branch-selector">Select branch<select id="selected-branch" required><option value="">Loading branches...</option></select></label>
+          <div class="branch-load-actions">
+            <button id="load-stock-button" class="load-stock-button" type="button">Load stock</button>
+            <button id="refresh-stock-button" class="refresh-stock-button" type="button">Refresh figures</button>
+          </div>
         </div>
+        <p class="sub">Filter and select a Main POS product, then enter the quantity to send.</p>
         <form id="transfer-form" class="transfer-form">
-          <label>Product<input id="transfer-search" type="search" list="transfer-products" required placeholder="Type product name"><datalist id="transfer-products"></datalist></label>
+          <label class="product-picker">Product<input id="transfer-search" type="search" autocomplete="off" required placeholder="Type to filter products"><datalist id="transfer-products"></datalist><div id="transfer-product-options" class="product-picker-options" role="listbox"></div></label>
           <input id="transfer-product" type="hidden"><input id="transfer-name" type="hidden">
           <label>Quantity<input id="transfer-quantity" type="number" min="1" step="1" required></label>
           <button id="transfer-submit" type="submit">Send stock to branch</button>
         </form>
         <div id="transfer-notice" class="notice" role="status"></div>
+        <div id="transfer-queue" class="transfer-queue" aria-live="polite" aria-label="Transfers waiting to be sent"></div>
+        <div class="toggle-row">
+          <span class="toggle-label">New branch product fields</span>
+          <button id="branch-product-toggle" class="toggle-button" type="button" aria-pressed="false">Turn on new product fields</button>
+        </div>
+        <div id="branch-product-form-wrap" class="branch-product-form-wrap">
+          <form id="branch-product-form" class="transfer-form">
+            <label>Product name<input id="branch-product-name" type="text" maxlength="250" required placeholder="Product name"></label>
+            <label>Product ID<input id="branch-product-id" type="number" min="12100000" max="2147483647" step="1" value="12100000" required></label>
+            <label>Product code<input id="branch-product-code" type="text" maxlength="50" value="12100001" readonly></label>
+            <label>Barcode<input id="branch-product-barcode" type="text" maxlength="100" placeholder="Optional barcode"></label>
+            <label>Opening quantity<input id="branch-product-quantity" type="number" value="0" disabled></label>
+            <label>Selling price<input id="branch-product-price" type="number" min="0" step="0.01" required placeholder="0.00"></label>
+            <label>Tax rate (%)<input id="branch-product-tax-rate" type="number" min="0" max="100" step="0.01" value="0"></label>
+            <button id="branch-product-submit" type="submit">Create branch product</button>
+          </form>
+          <div id="branch-product-notice" class="notice" role="status"></div>
+        </div>
+        <form id="branch-price-form" class="transfer-form">
+          <label class="product-picker">Product<input id="branch-price-search" type="search" autocomplete="off" required placeholder="Type to filter branch products"><datalist id="branch-price-products"></datalist><div id="branch-price-product-options" class="product-picker-options" role="listbox"></div></label>
+          <input id="branch-price-product" type="hidden"><input id="branch-price-name" type="hidden">
+          <label>Current branch price<input id="branch-current-price" type="text" readonly placeholder="Select a branch product"></label>
+          <label>New branch price<input id="branch-price-input" type="number" min="0" step="0.01" required placeholder="Current price appears after selecting a product"></label>
+          <button id="branch-price-submit" type="submit">Save branch price</button>
+        </form>
+        <div id="branch-price-notice" class="notice" role="status"></div>
       </div>
       </div>
-      <div id="products-panel" class="panel panel-wide product-browser">
+      <div id="products-panel" class="panel panel-wide product-browser branch-data-card" data-branch-loading-card>
         <div class="browser-heading"><div class="browser-actions"><span id="product-catalog-status" class="catalog-status">Select a branch to load products.</span></div></div>
         <label>Search products<input id="branch-product-search" type="search" placeholder="Search products by name, code, or barcode" autocomplete="off"></label>
         <div id="branch-products" class="stock-table-wrap"><p class="empty">Select a branch to see its products.</p></div>
       </div>
-      <div id="stock-activity-panel" class="panel panel-wide">
-        <div class="browser-heading"><div><h2>Stock activity</h2><p class="sub">The newest stock movements for the selected branch.</p></div><div class="browser-actions"><label class="activity-branch-label">Branch<select id="activity-branch"><option value="">Select branch</option></select></label><span id="movement-status" class="catalog-status">Select a branch.</span></div></div>
+      <div id="stock-activity-panel" class="panel panel-wide branch-data-card" data-branch-loading-card>
+        <div class="browser-heading"><div><h2>Stock activity</h2><p class="sub">The newest stock movements for the selected branch.</p></div><div class="browser-actions"><label class="activity-branch-label">Branch<select id="activity-branch"><option value="">Select branch</option></select></label><label class="activity-date-label">Date<input id="activity-date" type="date"></label><span id="movement-status" class="catalog-status">Select a branch.</span></div></div>
         <div id="stock-movements" class="stock-table-wrap"><p class="empty">Loading stock activity...</p></div>
       </div>
       <div class="panel panel-wide">
-        <div class="browser-heading"><div><h2>Stock transfer log</h2><p class="sub">Every transfer sent from main stock to a branch.</p></div><span id="transfer-status" class="catalog-status">Loading transfers...</span></div>
+        <div class="browser-heading"><div><h2>Stock transfer log</h2><p class="sub">Every transfer sent from main stock to a branch.</p></div><div class="browser-actions"><label class="activity-date-label">Date<input id="transfer-log-date" type="date"></label><button id="clear-transfer-date" class="refresh-stock-button" type="button">Clear date</button><span id="transfer-status" class="catalog-status">Loading transfers...</span></div></div>
         <div id="stock-transfers" class="stock-table-wrap"><p class="empty">Loading transfer log...</p></div>
       </div>
     </section>
+    <dialog id="product-delete-dialog" class="product-delete-dialog" aria-labelledby="product-delete-title">
+      <form id="product-delete-form">
+        <h2 id="product-delete-title">Confirm product deletion</h2>
+        <p id="product-delete-description" class="sub"></p>
+        <label>Your account password<input id="product-delete-password" type="password" autocomplete="current-password" required></label>
+        <div class="product-delete-actions"><button id="product-delete-cancel" class="product-delete-cancel" type="button">Cancel</button><button type="submit">Delete product</button></div>
+        <p id="product-delete-status" class="notice" role="status"></p>
+      </form>
+    </dialog>
   </main>
 </div>
 <button id="section-jump-button" class="section-jump-button" type="button" aria-label="Go to stock activity">Stock activity</button>
@@ -157,57 +273,217 @@
   const refreshStockButton = document.querySelector('#refresh-stock-button');
   const branchProductSearch = document.querySelector('#branch-product-search');
   const branchProducts = document.querySelector('#branch-products');
+  const productDeleteDialog = document.querySelector('#product-delete-dialog');
+  const productDeleteForm = document.querySelector('#product-delete-form');
+  const productDeletePassword = document.querySelector('#product-delete-password');
+  const productDeleteDescription = document.querySelector('#product-delete-description');
+  const productDeleteStatus = document.querySelector('#product-delete-status');
+  const productDeleteCancel = document.querySelector('#product-delete-cancel');
+  let pendingProductDeletion = null;
   const stockMovements = document.querySelector('#stock-movements');
   const productsPanel = document.querySelector('#products-panel');
   const stockActivityPanel = document.querySelector('#stock-activity-panel');
   const sectionJumpButton = document.querySelector('#section-jump-button');
   const activityBranch = document.querySelector('#activity-branch');
+  const activityDate = document.querySelector('#activity-date');
+  const selectedBranchName = document.querySelector('#selected-branch-name');
   const movementStatus = document.querySelector('#movement-status');
   const stockTransfers = document.querySelector('#stock-transfers');
+  const branchLoadingCards = [...document.querySelectorAll('[data-branch-loading-card]')];
   const transferStatus = document.querySelector('#transfer-status');
+  const transferLogDate = document.querySelector('#transfer-log-date');
   const mainStockForm = document.querySelector('#main-stock-form');
   const mainStockNotice = document.querySelector('#main-stock-notice');
   const mainStockSubmit = document.querySelector('#main-stock-submit');
+  const mainStockQueueList = document.querySelector('#main-stock-queue');
   const transferForm = document.querySelector('#transfer-form');
   const transferNotice = document.querySelector('#transfer-notice');
   const transferSubmit = document.querySelector('#transfer-submit');
+  const transferQueueList = document.querySelector('#transfer-queue');
+  const branchProductForm = document.querySelector('#branch-product-form');
+  const branchProductToggle = document.querySelector('#branch-product-toggle');
+  const branchProductFormWrap = document.querySelector('#branch-product-form-wrap');
+  const branchProductId = document.querySelector('#branch-product-id');
+  const branchProductCode = document.querySelector('#branch-product-code');
+  const branchProductSubmit = document.querySelector('#branch-product-submit');
+  const branchProductNotice = document.querySelector('#branch-product-notice');
+  const branchPriceForm = document.querySelector('#branch-price-form');
+  const branchPriceSearch = document.querySelector('#branch-price-search');
+  const branchPriceProductOptions = document.querySelector('#branch-price-product-options');
+  const branchPriceProduct = document.querySelector('#branch-price-product');
+  const branchPriceName = document.querySelector('#branch-price-name');
+  const branchPriceProducts = document.querySelector('#branch-price-products');
+  const branchCurrentPrice = document.querySelector('#branch-current-price');
+  const branchPriceInput = document.querySelector('#branch-price-input');
+  const branchPriceSubmit = document.querySelector('#branch-price-submit');
+  const branchPriceNotice = document.querySelector('#branch-price-notice');
   let branchCatalogProducts = [];
-  let mainCatalogProducts = [];
+  let branchCatalogSince = '';
+  let branchCatalogSinceBranch = '';
   let branchProductsLoading = false;
-  let branchProductsRefreshQueued = false;
+  let branchProductsRequestId = 0;
+  let branchRefreshRequestId = 0;
+  let branchRefreshController = null;
   let stockMovementsLoading = false;
-  let stockTransfersLoading = false;
+  let stockMovementsRequestId = 0;
+  let stockMovementsController = null;
+  let stockTransfersRequestId = 0;
+  let stockTransfersController = null;
   let refreshAllLoading = false;
+  const transferQueue = [];
+  let transferQueueProcessing = false;
+  let activeTransfer = null;
+  const mainStockQueue = [];
+  let mainStockQueueProcessing = false;
+  let activeMainStockTake = null;
   const productSearches = [
-    { source: 'branch', input: document.querySelector('#main-stock-search'), list: document.querySelector('#main-stock-products'), id: document.querySelector('#main-stock-product'), name: document.querySelector('#main-stock-name') },
-    { source: 'main', input: document.querySelector('#transfer-search'), list: document.querySelector('#transfer-products'), id: document.querySelector('#transfer-product'), name: document.querySelector('#transfer-name') },
+    { source: 'branch', input: document.querySelector('#main-stock-search'), list: document.querySelector('#main-stock-products'), options: document.querySelector('#main-stock-product-options'), id: document.querySelector('#main-stock-product'), name: document.querySelector('#main-stock-name') },
+    { source: 'branch', input: document.querySelector('#transfer-search'), list: document.querySelector('#transfer-products'), options: document.querySelector('#transfer-product-options'), id: document.querySelector('#transfer-product'), name: document.querySelector('#transfer-name') },
+    { source: 'branch', input: branchPriceSearch, list: branchPriceProducts, options: branchPriceProductOptions, id: branchPriceProduct, name: branchPriceName },
   ];
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const productOptions = products => products.map(product => `<option value="${escapeHtml(product.product_name)}" label="ID ${escapeHtml(product.product_id)}${product.product_code ? ` · ${escapeHtml(product.product_code)}` : ''}"></option>`).join('');
-  function selectProduct(product) {
-    productSearches.forEach(control => {
-      const selected = control.source === 'main'
-        ? mainCatalogProducts.find(item => String(item.product_id) === String(product.product_id)) || product
-        : product;
-      control.input.value = selected.product_name;
-      control.id.value = selected.product_id;
-      control.name.value = selected.product_name;
+  const renderPickerOptions = (options, products) => {
+    options.innerHTML = products.length
+      ? products.map(product => `<button type="button" class="product-picker-option" role="option" data-product-id="${escapeHtml(product.product_id)}"><strong>${escapeHtml(product.product_name)}</strong><small>ID ${escapeHtml(product.product_id)}${product.product_code ? ` · ${escapeHtml(product.product_code)}` : ''}</small></button>`).join('')
+      : '<span class="empty">No matching products.</span>';
+    options.classList.add('is-open');
+  };
+  function renderMainStockQueue() {
+    const waiting = mainStockQueue.map((stockTake, index) => `<div class="transfer-queue-item"><div><div class="transfer-queue-product">${escapeHtml(stockTake.product_name)}</div><div class="transfer-queue-detail">${escapeHtml(stockTake.quantity)} for ${escapeHtml(stockTake.branch)} · #${index + 1} waiting</div></div><span class="transfer-queue-state">Waiting</span></div>`).join('');
+    const updating = activeMainStockTake ? `<div class="transfer-queue-item"><div><div class="transfer-queue-product">${escapeHtml(activeMainStockTake.product_name)}</div><div class="transfer-queue-detail">${escapeHtml(activeMainStockTake.quantity)} for ${escapeHtml(activeMainStockTake.branch)}</div></div><span class="transfer-queue-state sending">Updating</span></div>` : '';
+    mainStockQueueList.innerHTML = updating + waiting;
+  }
+  const closePickerOptions = options => options?.classList.remove('is-open');
+  function renderTransferQueue() {
+    const waiting = transferQueue.map((transfer, index) => `<div class="transfer-queue-item"><div><div class="transfer-queue-product">${escapeHtml(transfer.product_name)}</div><div class="transfer-queue-detail">${escapeHtml(transfer.quantity)} to ${escapeHtml(transfer.branch)} · #${index + 1} waiting</div></div><span class="transfer-queue-state">Waiting</span></div>`).join('');
+    const sending = activeTransfer ? `<div class="transfer-queue-item"><div><div class="transfer-queue-product">${escapeHtml(activeTransfer.product_name)}</div><div class="transfer-queue-detail">${escapeHtml(activeTransfer.quantity)} to ${escapeHtml(activeTransfer.branch)}</div></div><span class="transfer-queue-state sending">Sending</span></div>` : '';
+    transferQueueList.innerHTML = sending + waiting;
+  }
+  function setBranchPriceFields(price) {
+    const numericPrice = Number(price);
+    const value = Number.isFinite(numericPrice) && numericPrice === 0 ? '' : (price ?? '');
+    branchCurrentPrice.value = value;
+    branchPriceInput.value = value;
+    branchPriceInput.placeholder = value ? `Current: ${value}` : 'Enter selling price';
+  }
+  async function loadSelectedBranchPrice(productId, productName) {
+    const localProduct = branchCatalogProducts.find(item => String(item.product_id) === String(productId) || String(item.product_name).trim().toLowerCase() === String(productName).trim().toLowerCase());
+    if (localProduct) setBranchPriceFields(localProduct.selling_price);
+    else {
+      branchCurrentPrice.value = '';
+      branchPriceInput.value = '';
+      branchPriceInput.placeholder = 'Loading branch price...';
+    }
+    if (!selectedBranch.value) return;
+    try {
+      const response = await fetch(`/api/products/?q=${encodeURIComponent(productId)}&branch=${encodeURIComponent(selectedBranch.value)}&_=${Date.now()}`, { cache: 'no-store' });
+      const data = await response.json();
+      const branchProduct = (data.products || []).find(item => String(item.product_id) === String(productId) || String(item.product_name).trim().toLowerCase() === String(productName).trim().toLowerCase());
+      if (branchProduct) setBranchPriceFields(branchProduct.selling_price);
+    } catch (error) {
+      branchPriceInput.placeholder = 'Branch price unavailable';
+    }
+  }
+  function setSelectedProduct(product, focusTransfer = false) {
+    const productFields = [
+      ['#main-stock-search', '#main-stock-product', '#main-stock-name'],
+      ['#transfer-search', '#transfer-product', '#transfer-name'],
+      ['#branch-price-search', '#branch-price-product', '#branch-price-name'],
+    ];
+    productFields.forEach(([inputSelector, idSelector, nameSelector]) => {
+      document.querySelector(inputSelector).value = product.product_name;
+      document.querySelector(idSelector).value = product.product_id;
+      document.querySelector(nameSelector).value = product.product_name;
     });
-    document.querySelector('#transfer-quantity').focus();
+    void loadSelectedBranchPrice(product.product_id, product.product_name);
+    if (focusTransfer) document.querySelector('#transfer-quantity').focus();
+  }
+  function selectProduct(product) {
+    setSelectedProduct(product, true);
   }
   function renderBranchProducts() {
     const query = branchProductSearch.value.trim().toLowerCase();
     const products = branchCatalogProducts.filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(query)));
     branchProducts.innerHTML = products.length
-      ? `<table class="stock-table"><thead><tr><th>Product</th><th>Selling price</th><th>Branch available</th><th>Sent</th><th>Sold</th><th></th></tr></thead><tbody>${products.map(product => `<tr><td class="product-name">${escapeHtml(product.product_name)}</td><td>${escapeHtml(product.selling_price)}</td><td><strong>${escapeHtml(product.available_quantity)}</strong></td><td>${escapeHtml(product.sent_quantity)}</td><td>${escapeHtml(product.sold_quantity)}</td><td><button type="button" data-product-id="${escapeHtml(product.product_id)}">Select</button></td></tr>`).join('')}</tbody></table>`
+      ? `<table class="stock-table"><thead><tr><th>Product</th><th>Selling price</th><th>Tax rate</th><th>Branch available</th><th>Sent</th><th>Sold</th><th>Actions</th></tr></thead><tbody>${products.map(product => { const productId = escapeHtml(product.product_id); return `<tr data-product-id="${productId}"><td class="product-name">${escapeHtml(product.product_name)}</td><td>${escapeHtml(product.selling_price)}</td><td><form class="tax-rate-form" data-product-tax-rate="${productId}"><input type="number" min="0" max="100" step="0.01" value="${escapeHtml(product.tax_rate ?? 0)}" aria-label="Tax rate percentage for ${escapeHtml(product.product_name)}"><button type="submit">Save tax</button></form></td><td><strong>${escapeHtml(product.available_quantity)}</strong></td><td>${escapeHtml(product.sent_quantity)}</td><td>${escapeHtml(product.sold_quantity)}</td><td><button type="button" data-product-select="${productId}">Select</button><button type="button" class="delete-product-button" data-product-delete="${productId}" aria-label="Delete ${escapeHtml(product.product_name)} at branch">Delete at branch</button></td></tr>`; }).join('')}</tbody></table>`
       : '<p class="empty">No products match your search.</p>';
   }
   async function loadBranchProducts(showLoading = true) {
-    if (branchProductsLoading) {
-      if (showLoading) branchProductsRefreshQueued = true;
+  branchProducts.addEventListener('submit', async event => {
+    const taxForm = event.target.closest('[data-product-tax-rate]');
+    if (!taxForm) return;
+    event.preventDefault();
+    const productId = taxForm.dataset.productTaxRate;
+    const taxInput = taxForm.querySelector('input');
+    const saveButton = taxForm.querySelector('button');
+    saveButton.disabled = true;
+    productCatalogStatus.textContent = 'Saving product tax rate...';
+    try {
+      const response = await fetch('/api/products/tax-rate/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ branch:selectedBranch.value, product_id:productId, tax_rate:taxInput.value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Product tax rate could not be saved.');
+      const product = branchCatalogProducts.find(item => String(item.product_id) === productId);
+      if (product) product.tax_rate = data.tax_rate;
+      productCatalogStatus.textContent = `${data.product_name} tax rate saved at ${data.tax_rate}%. POS branches will receive it on sync.`;
+      renderBranchProducts();
+    } catch (error) {
+      productCatalogStatus.textContent = error.message;
+      saveButton.disabled = false;
+    }
+  });
+    if (branchProductsLoading) return;
+    const deleteButton = event.target.closest('[data-product-delete]');
+    if (deleteButton) {
+      event.stopPropagation();
+      const product = branchCatalogProducts.find(item => String(item.product_id) === deleteButton.dataset.productDelete);
+      const branch = selectedBranch.value;
+      if (!product || !branch) return;
+      pendingProductDeletion = { product, branch, button: deleteButton };
+      productDeleteDescription.textContent = `Delete ${product.product_name} from ${branch}? Historical sales will be kept.`;
+      productDeletePassword.value = '';
+      productDeleteStatus.className = 'notice';
+      productDeleteStatus.textContent = '';
+      productDeleteDialog.showModal();
+      productDeletePassword.focus();
       return;
     }
+    if (!event.target.closest('[data-product-select]')) return;
+    const requestId = ++branchProductsRequestId;
     const branch = selectedBranch.value;
+    if (showLoading) {
+      branchProducts.innerHTML = '<p class="empty loading-state"><span class="loading-spinner" aria-hidden="true"></span>Loading products...</p>';
+      setBranchCardsLoading(true);
+  productDeleteCancel.addEventListener('click', () => productDeleteDialog.close());
+  productDeleteForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!pendingProductDeletion) return;
+    const { product, branch, button } = pendingProductDeletion;
+    const submitButton = productDeleteForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    productDeleteStatus.className = 'notice';
+    productDeleteStatus.textContent = 'Queueing deletion...';
+    try {
+      const response = await fetch('/api/products/delete/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ branch, product_id:product.product_id, password:productDeletePassword.value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Product deletion could not be queued.');
+      productDeleteDialog.close();
+      pendingProductDeletion = null;
+      branchCatalogSince = '';
+      branchCatalogSinceBranch = '';
+      await loadBranchProducts(false);
+      productCatalogStatus.textContent = `Deletion queued for ${product.product_name}; it will be deactivated at ${branch} on the next sync.`;
+    } catch (error) {
+      productDeleteStatus.className = 'notice error';
+      productDeleteStatus.textContent = error.message;
+      productDeletePassword.value = '';
+      productDeletePassword.focus();
+      button.disabled = false;
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+    }
     branchProductsLoading = true;
     if (showLoading) {
       loadStockButton.disabled = true;
@@ -215,7 +491,9 @@
       loadStockButton.setAttribute('aria-busy', 'true');
     }
     if (!branch) {
+      if (requestId !== branchProductsRequestId) return;
       branchCatalogProducts = [];
+      branchPriceProducts.innerHTML = '';
       branchProducts.innerHTML = '<p class="empty">Select a branch to see its products.</p>';
       productCatalogStatus.textContent = 'Select a branch to load products.';
       branchProductsLoading = false;
@@ -226,38 +504,48 @@
     }
     if (showLoading) productCatalogStatus.textContent = 'Loading products...';
     try {
-      const response = await fetch(`/api/stock/summary/?branch=${encodeURIComponent(branch)}&_=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+      const startedAt = new Date().toISOString();
+      const params = new URLSearchParams({ branch });
+      if (branchCatalogSince && branchCatalogSinceBranch === branch) params.set('since', branchCatalogSince);
+      const response = await fetch(`/api/stock/summary/?${params}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Products could not be loaded.');
-      branchCatalogProducts = data.products || [];
+      if (requestId !== branchProductsRequestId) return;
+      const products = data.products || [];
+      const fullSnapshot = data.full !== false;
+      if (fullSnapshot) {
+        branchCatalogProducts = products;
+      } else if (data.changed) {
+        const productsById = new Map(branchCatalogProducts.map(product => [String(product.product_id), product]));
+        products.forEach(product => productsById.set(String(product.product_id), product));
+        branchCatalogProducts = [...productsById.values()];
+      }
+      branchCatalogSince = startedAt;
+      branchCatalogSinceBranch = branch;
+      if (!fullSnapshot && !data.changed) {
+        productCatalogStatus.textContent = `${branchCatalogProducts.length} products up to date for ${branch}.`;
+        return;
+      }
       document.querySelector('#main-stock-products').innerHTML = productOptions(branchCatalogProducts);
+      branchPriceProducts.innerHTML = productOptions(branchCatalogProducts);
+      document.querySelector('#transfer-products').innerHTML = productOptions(branchCatalogProducts);
       productCatalogStatus.textContent = `${branchCatalogProducts.length} products updated for ${branch}.`;
       renderBranchProducts();
+      if (document.querySelector('#transfer-product-options').classList.contains('is-open')) {
+        document.querySelector('#transfer-product-options').classList.remove('is-open');
+      }
     } catch (error) {
+      if (requestId !== branchProductsRequestId) return;
       productCatalogStatus.textContent = branchCatalogProducts.length
         ? `Refresh failed; showing the last ${branchCatalogProducts.length} products.`
         : 'Products unavailable.';
     } finally {
+      if (requestId !== branchProductsRequestId) return;
       branchProductsLoading = false;
       loadStockButton.disabled = false;
       loadStockButton.textContent = 'Load stock';
       loadStockButton.setAttribute('aria-busy', 'false');
-      if (branchProductsRefreshQueued) {
-        branchProductsRefreshQueued = false;
-        loadBranchProducts(true);
-      }
-    }
-  }
-  async function loadMainCatalogProducts() {
-    try {
-      const response = await fetch(`/api/products/?branch=MAIN&_=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Main products could not be loaded.');
-      mainCatalogProducts = data.products || [];
-      document.querySelector('#transfer-products').innerHTML = productOptions(mainCatalogProducts);
-    } catch (error) {
-      mainCatalogProducts = [];
-      document.querySelector('#transfer-products').innerHTML = '';
+      if (showLoading) setBranchCardsLoading(false);
     }
   }
   refreshStockButton.addEventListener('click', () => loadBranchProducts(true));
@@ -266,93 +554,167 @@
     loadStockButton.textContent = 'Loading products...';
     loadStockButton.setAttribute('aria-busy', 'true');
     productCatalogStatus.textContent = 'Loading products...';
-    loadBranchProducts(true);
+    return loadBranchProducts(true);
   }
   async function loadStockMovements() {
     if (stockMovementsLoading) return;
+    const requestId = ++stockMovementsRequestId;
+    stockMovementsController?.abort();
     if (!activityBranch.value) {
       movementStatus.textContent = 'Select a branch.';
       stockMovements.innerHTML = '<p class="empty">Select a branch to view stock activity.</p>';
       return;
     }
     const branch = activityBranch.value;
+    const date = activityDate.value;
+    const timezoneOffset = new Date().getTimezoneOffset();
+    const controller = new AbortController();
+    stockMovementsController = controller;
     stockMovementsLoading = true;
     try {
-      const response = await fetch(`/api/stock/movements/?branch=${encodeURIComponent(branch)}&_=${Date.now()}`, { cache: 'no-store' });
+      const response = await fetch(`/api/stock/movements/?branch=${encodeURIComponent(branch)}&date=${encodeURIComponent(date)}&timezone_offset=${encodeURIComponent(timezoneOffset)}&_=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Stock activity unavailable.');
-      const movements = data.movements || [];
+      if (requestId !== stockMovementsRequestId || activityBranch.value !== branch) return;
+      const movements = (data.movements || []).sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
       movementStatus.textContent = `${movements.length} movement${movements.length === 1 ? '' : 's'}`;
       stockMovements.innerHTML = movements.length
-        ? `<table class="movement-table"><thead><tr><th>Product</th><th>Type</th><th>Quantity</th><th>Source</th><th>Date</th></tr></thead><tbody>${movements.map(movement => `<tr><td>${escapeHtml(movement.product_name)}<small>ID ${escapeHtml(movement.product_id)}</small></td><td class="${escapeHtml(movement.movement_type)}">${escapeHtml(movement.movement_type)}</td><td>${escapeHtml(movement.quantity)}</td><td>${escapeHtml(movement.source)}</td><td>${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(movement.created_at)))}</td></tr>`).join('')}</tbody></table>`
+        ? `<table class="movement-table"><thead><tr><th>Product</th><th>Type</th><th>Quantity</th><th>Source</th><th>Date</th></tr></thead><tbody>${movements.map(movement => { const createdAt = new Date(movement.created_at); return `<tr><td>${escapeHtml(movement.product_name)}<small>ID ${escapeHtml(movement.product_id)}</small></td><td class="${escapeHtml(movement.movement_type)}">${escapeHtml(movement.movement_type)}</td><td>${escapeHtml(movement.quantity)}</td><td>${escapeHtml(movement.source)}</td><td><time datetime="${escapeHtml(movement.created_at)}">${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(createdAt))}</time></td></tr>`; }).join('')}</tbody></table>`
         : '<p class="empty">No stock movements recorded yet.</p>';
     } catch (error) {
+      if (error.name === 'AbortError' || requestId !== stockMovementsRequestId) return;
       movementStatus.textContent = 'Activity unavailable.';
       stockMovements.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
     } finally {
-      stockMovementsLoading = false;
+      if (requestId === stockMovementsRequestId) {
+        stockMovementsLoading = false;
+        stockMovementsController = null;
+      }
     }
   }
   async function loadStockTransfers() {
-    if (stockTransfersLoading) return;
-    stockTransfersLoading = true;
+    const requestId = ++stockTransfersRequestId;
+    stockTransfersController?.abort();
+    const controller = new AbortController();
+    stockTransfersController = controller;
     try {
-      const response = await fetch(`/api/stock/transfers/log/?_=${Date.now()}`, { cache: 'no-store' });
+      const params = new URLSearchParams();
+      if (transferLogDate.value) params.set('date', transferLogDate.value);
+      const response = await fetch(`/api/stock/transfers/log/?${params}`, { cache: 'no-store', signal: controller.signal });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Transfer log unavailable.');
+      if (requestId !== stockTransfersRequestId) return;
       const transfers = data.transfers || [];
-      transferStatus.textContent = `${transfers.length} transfer${transfers.length === 1 ? '' : 's'}`;
+      transferStatus.textContent = data.date
+        ? `${transfers.length} transfer${transfers.length === 1 ? '' : 's'} on ${data.date}`
+        : `${transfers.length} recent transfer${transfers.length === 1 ? '' : 's'}`;
       stockTransfers.innerHTML = transfers.length
         ? `<table class="transfer-table"><thead><tr><th>Branch</th><th>Product</th><th>Quantity</th><th>Status</th><th>Sent by</th><th>Created</th><th>Completed</th></tr></thead><tbody>${transfers.map(transfer => `<tr><td>${escapeHtml(transfer.branch)}</td><td>${escapeHtml(transfer.product_name)}<small>ID ${escapeHtml(transfer.product_id)}</small></td><td>${escapeHtml(transfer.quantity)}</td><td><span class="transfer-status ${escapeHtml(transfer.status)}">${escapeHtml(transfer.status)}</span></td><td>${escapeHtml(transfer.created_by)}</td><td>${escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(transfer.created_at)))}</td><td>${transfer.completed_at ? escapeHtml(new Intl.DateTimeFormat(undefined, {dateStyle:'medium', timeStyle:'short'}).format(new Date(transfer.completed_at))) : '-'}</td></tr>`).join('')}</tbody></table>`
         : '<p class="empty">No stock transfers recorded yet.</p>';
     } catch (error) {
+      if (requestId !== stockTransfersRequestId || error.name === 'AbortError') return;
       transferStatus.textContent = 'Log unavailable.';
       stockTransfers.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
     } finally {
-      stockTransfersLoading = false;
+      if (requestId === stockTransfersRequestId) stockTransfersController = null;
     }
   }
+  transferLogDate.addEventListener('change', loadStockTransfers);
+  document.querySelector('#clear-transfer-date').addEventListener('click', () => {
+    transferLogDate.value = '';
+    loadStockTransfers();
+  });
   async function refreshBranches() {
+    const requestId = ++branchRefreshRequestId;
+    branchRefreshController?.abort();
+    const controller = new AbortController();
+    branchRefreshController = controller;
     try {
-      const currentBranch = selectedBranch.value || localStorage.getItem(selectedBranchKey) || '';
-      const response = await fetch(`/api/branches/?_=${Date.now()}`, { cache: 'no-store' });
+      const previousBranch = selectedBranch.value;
+      const response = await fetch(`/api/branches/?_=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
       const data = await response.json();
+      if (requestId !== branchRefreshRequestId) return;
+      const currentBranch = selectedBranch.value || localStorage.getItem(selectedBranchKey) || '';
       const branches = data.branches || [];
       const availableBranches = branches.filter(branch => branch.online === true);
-      const branchOptions = availableBranches.length ? '<option value="">Select branch</option>' + availableBranches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('') : '<option value="">No online branches</option>';
+      const currentBranchOption = currentBranch && !availableBranches.some(branch => branch.name === currentBranch)
+        ? `<option value="${escapeHtml(currentBranch)}">${escapeHtml(currentBranch)} (reconnecting...)</option>`
+        : '';
+      const branchOptions = availableBranches.length || currentBranchOption
+        ? '<option value="">Select branch</option>' + availableBranches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('') + currentBranchOption
+        : '<option value="">No online branches</option>';
       selectedBranch.innerHTML = branchOptions;
       activityBranch.innerHTML = branchOptions;
+      if (!currentBranch && availableBranches.length) selectedBranch.value = availableBranches[0].name;
       if (currentBranch && [...selectedBranch.options].some(option => option.value === currentBranch)) selectedBranch.value = currentBranch;
       if (currentBranch && [...activityBranch.options].some(option => option.value === currentBranch)) activityBranch.value = currentBranch;
+      selectedBranchName.textContent = selectedBranch.value || 'No online branch';
+      if (selectedBranch.value && selectedBranch.value !== previousBranch) selectedBranch.dispatchEvent(new Event('change'));
     } catch (error) {
+      if (error.name === 'AbortError' || requestId !== branchRefreshRequestId) return;
       if (!selectedBranch.options.length) selectedBranch.innerHTML = '<option value="">Branches unavailable</option>';
       if (!activityBranch.options.length) activityBranch.innerHTML = '<option value="">Branches unavailable</option>';
+    } finally {
+      if (requestId === branchRefreshRequestId) branchRefreshController = null;
     }
+  }
+  function setBranchCardsLoading(isLoading) {
+    branchLoadingCards.forEach(card => {
+      card.classList.toggle('is-loading', isLoading);
+      card.setAttribute('aria-busy', String(isLoading));
+    });
   }
   function setupProductSearch(control) {
     let products = [];
     let timer;
+    const openOptions = () => control.options?.classList.add('is-open');
+    const catalogProducts = () => branchCatalogProducts;
+    const filterProducts = query => catalogProducts().filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(query)));
+    const applySelectedProduct = () => {
+      const selected = [...products, ...branchCatalogProducts].find(product => product.product_name === control.input.value);
+      if (!selected) return;
+      control.id.value = selected.product_id;
+      control.name.value = selected.product_name;
+      if (branchPriceInput) void loadSelectedBranchPrice(selected.product_id, selected.product_name);
+      closePickerOptions(control.options);
+    };
     control.input.addEventListener('input', () => {
       control.id.value = ''; control.name.value = '';
+      applySelectedProduct();
+      openOptions();
+      const query = control.input.value.trim().toLowerCase();
+      products = filterProducts(query);
+      if (control.options) renderPickerOptions(control.options, products);
       clearTimeout(timer);
       timer = setTimeout(async () => {
-        const query = control.input.value.trim();
-        const sourceBranch = control.source === 'main' ? 'MAIN' : selectedBranch.value;
+        const searchQuery = control.input.value.trim();
+        const sourceBranch = selectedBranch.value;
         if (!sourceBranch) { control.list.innerHTML = ''; return; }
-        if (query.length < 2) { control.list.innerHTML = ''; return; }
+        if (searchQuery.length < 2) { control.list.innerHTML = ''; return; }
         try {
-          const response = await fetch(`/api/products/?q=${encodeURIComponent(query)}&branch=${encodeURIComponent(sourceBranch)}&_=${Date.now()}`, { cache: 'no-store' });
+          const response = await fetch(`/api/products/?q=${encodeURIComponent(searchQuery)}&branch=${encodeURIComponent(sourceBranch)}&_=${Date.now()}`, { cache: 'no-store' });
           const data = await response.json();
-          products = data.products || [];
+          products = (data.products || filterProducts(searchQuery.toLowerCase())).filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(searchQuery.toLowerCase()))).slice(0, 100);
           control.list.innerHTML = productOptions(products);
+          if (control.options) renderPickerOptions(control.options, products);
         } catch (error) { control.list.innerHTML = ''; }
       }, 180);
     });
-    control.input.addEventListener('change', () => {
-      const selected = [...products, ...(control.source === 'main' ? mainCatalogProducts : branchCatalogProducts)].find(product => product.product_name === control.input.value);
-      if (!selected) { control.id.value = ''; control.name.value = ''; return; }
-      control.id.value = selected.product_id;
-      control.name.value = selected.product_name;
+    control.input.addEventListener('change', applySelectedProduct);
+    control.input.addEventListener('focus', () => {
+      if (!control.options) return;
+      products = filterProducts(control.input.value.trim().toLowerCase());
+      renderPickerOptions(control.options, products);
+    });
+    control.options?.addEventListener('mousedown', event => event.preventDefault());
+    control.options?.addEventListener('click', event => {
+      const option = event.target.closest('[data-product-id]');
+      if (!option) return;
+      const product = products.find(item => String(item.product_id) === option.dataset.productId)
+        || branchCatalogProducts.find(item => String(item.product_id) === option.dataset.productId);
+      if (!product) return;
+      setSelectedProduct(product);
+      closePickerOptions(control.options);
     });
   }
   branchProductSearch.addEventListener('input', renderBranchProducts);
@@ -377,70 +739,199 @@
   }, { threshold: 0.35 });
   sectionObserver.observe(productsPanel);
   sectionObserver.observe(stockActivityPanel);
-  selectedBranch.addEventListener('change', () => {
+  selectedBranch.addEventListener('change', async () => {
+    branchCatalogSince = '';
+    branchCatalogSinceBranch = '';
+    setBranchCardsLoading(true);
     localStorage.setItem(selectedBranchKey, selectedBranch.value);
     productSearches.forEach(control => {
       control.input.value = ''; control.id.value = ''; control.name.value = ''; control.list.innerHTML = '';
     });
+    branchCurrentPrice.value = '';
+    branchPriceInput.value = '';
+    branchPriceInput.placeholder = 'Current price appears after selecting a product';
     branchProductSearch.value = '';
     activityBranch.value = selectedBranch.value;
-    requestBranchLoad();
-    loadStockMovements();
+    branchProducts.innerHTML = '<p class="empty loading-state"><span class="loading-spinner" aria-hidden="true"></span>Loading products...</p>';
+    stockMovements.innerHTML = '<p class="empty loading-state"><span class="loading-spinner" aria-hidden="true"></span>Loading stock activity...</p>';
+    try {
+      await Promise.all([requestBranchLoad(), loadStockMovements()]);
+    } finally {
+      setBranchCardsLoading(false);
+    }
   });
   activityBranch.addEventListener('change', loadStockMovements);
+  activityDate.addEventListener('change', loadStockMovements);
   loadStockButton.addEventListener('click', requestBranchLoad);
   async function refreshAll() {
     if (refreshAllLoading) return;
     refreshAllLoading = true;
+    setBranchCardsLoading(true);
     try {
       await refreshBranches();
-      await Promise.all([loadMainCatalogProducts(), loadBranchProducts(false), loadStockMovements(), loadStockTransfers()]);
+      await Promise.all([loadBranchProducts(false), loadStockMovements(), loadStockTransfers()]);
     } finally {
+      setBranchCardsLoading(false);
       refreshAllLoading = false;
     }
   }
-  mainStockForm.addEventListener('submit', async event => {
-    event.preventDefault(); mainStockSubmit.disabled = true; mainStockNotice.className = 'notice'; mainStockNotice.textContent = '';
+  mainStockForm.addEventListener('submit', event => {
+    event.preventDefault(); mainStockNotice.className = 'notice'; mainStockNotice.textContent = '';
     try {
       if (!selectedBranch.value) throw new Error('Select a connected branch first.');
-      if (!document.querySelector('#main-stock-product').value || !document.querySelector('#main-stock-name').value) throw new Error('Select a product from the branch stock list first.');
-      const response = await fetch('/api/stock/main/adjust/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ product_id:document.querySelector('#main-stock-product').value, product_name:document.querySelector('#main-stock-name').value, quantity:document.querySelector('#main-stock-quantity').value, branch:selectedBranch.value }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Main stock could not be updated.');
-      mainStockNotice.className = 'notice ok'; mainStockNotice.textContent = `${document.querySelector('#main-stock-name').value} main and ${data.branch} stock: ${data.quantity}`; mainStockForm.reset(); await loadBranchProducts(); await loadStockMovements();
+      const productId = document.querySelector('#main-stock-product').value;
+      const productName = document.querySelector('#main-stock-name').value;
+      const quantity = document.querySelector('#main-stock-quantity').value;
+      if (!productId || !productName) throw new Error('Select a product from the branch stock list first.');
+      if (!Number.isFinite(Number(quantity)) || Number(quantity) < 0 || !Number.isInteger(Number(quantity))) throw new Error('Enter a non-negative whole-number stock value.');
+      mainStockQueue.push({ product_id: productId, product_name: productName, quantity, branch: selectedBranch.value });
+      mainStockForm.reset();
+      renderMainStockQueue();
+      mainStockNotice.className = 'notice ok';
+      mainStockNotice.textContent = `${mainStockQueue.length} stock take${mainStockQueue.length === 1 ? '' : 's'} queued.`;
+      void processMainStockQueue();
     } catch (error) { mainStockNotice.className = 'notice error'; mainStockNotice.textContent = error.message; }
-    finally { mainStockSubmit.disabled = false; }
   });
-  transferForm.addEventListener('submit', async event => {
-    event.preventDefault(); transferSubmit.disabled = true; transferNotice.className = 'notice'; transferNotice.textContent = '';
+  async function processMainStockQueue() {
+    if (mainStockQueueProcessing) return;
+    mainStockQueueProcessing = true;
+    while (mainStockQueue.length) {
+      const stockTake = mainStockQueue.shift();
+      activeMainStockTake = stockTake;
+      renderMainStockQueue();
+      try {
+        mainStockNotice.className = 'notice';
+        mainStockNotice.textContent = `Updating ${stockTake.product_name}... ${mainStockQueue.length ? `${mainStockQueue.length} more queued.` : ''}`;
+        const response = await fetch('/api/stock/main/adjust/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(stockTake) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Main stock could not be updated.');
+        mainStockNotice.className = 'notice ok';
+        mainStockNotice.textContent = `${stockTake.product_name} main and ${data.branch} stock: ${data.quantity}.${mainStockQueue.length ? ` ${mainStockQueue.length} more queued.` : ''}`;
+        await loadBranchProducts(false);
+        await loadStockMovements();
+      } catch (error) {
+        mainStockNotice.className = 'notice error';
+        mainStockNotice.textContent = `${stockTake.product_name} failed: ${error.message}`;
+      }
+      activeMainStockTake = null;
+      renderMainStockQueue();
+    }
+    mainStockQueueProcessing = false;
+  }
+  transferForm.addEventListener('submit', event => {
+    event.preventDefault(); transferNotice.className = 'notice'; transferNotice.textContent = '';
     try {
       const transferSearch = document.querySelector('#transfer-search');
       const transferProduct = document.querySelector('#transfer-product');
       const transferName = document.querySelector('#transfer-name');
       const transferQuantity = document.querySelector('#transfer-quantity').value;
-      const typedProduct = mainCatalogProducts.find(product => product.product_name.trim().toLowerCase() === transferSearch.value.trim().toLowerCase());
+      const typedProduct = branchCatalogProducts.find(product => product.product_name.trim().toLowerCase() === transferSearch.value.trim().toLowerCase());
       if (typedProduct) {
         transferProduct.value = typedProduct.product_id;
         transferName.value = typedProduct.product_name;
       }
       if (!selectedBranch.value) throw new Error('Select a connected branch first.');
-      if (!transferProduct.value || !transferName.value) throw new Error('Select a product from the Main POS product list first.');
+      if (!transferProduct.value || !transferName.value) throw new Error('Select a product from the selected branch product list first.');
       if (!Number.isFinite(Number(transferQuantity)) || Number(transferQuantity) <= 0) throw new Error('Enter a positive transfer quantity.');
-      const response = await fetch('/api/stock/transfers/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ product_id:document.querySelector('#transfer-product').value, product_name:document.querySelector('#transfer-name').value, quantity:document.querySelector('#transfer-quantity').value, branch:selectedBranch.value }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Stock transfer could not be queued.');
-      transferNotice.className = 'notice ok'; transferNotice.textContent = `${data.transfer.product_name} transfer queued for ${data.transfer.branch}. The branch app will apply it on its next sync.`; transferForm.reset(); await loadBranchProducts(); await loadStockMovements(); await loadStockTransfers();
+      transferQueue.push({ product_id: transferProduct.value, product_name: transferName.value, quantity: transferQuantity, branch: selectedBranch.value });
+      transferForm.reset(); transferSearch.focus();
+      renderTransferQueue();
+      transferNotice.className = 'notice ok';
+      transferNotice.textContent = `${transferQueue.length} transfer${transferQueue.length === 1 ? '' : 's'} queued for sending.`;
+      void processTransferQueue();
     } catch (error) { transferNotice.className = 'notice error'; transferNotice.textContent = error.message; }
-    finally { transferSubmit.disabled = false; }
+  });
+  async function processTransferQueue() {
+    if (transferQueueProcessing) return;
+    transferQueueProcessing = true;
+    while (transferQueue.length) {
+      const transfer = transferQueue.shift();
+      activeTransfer = transfer;
+      renderTransferQueue();
+      try {
+        transferNotice.className = 'notice';
+        transferNotice.textContent = `Sending ${transfer.product_name}... ${transferQueue.length ? `${transferQueue.length} more queued.` : ''}`;
+        const response = await fetch('/api/stock/transfers/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(transfer) });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Stock transfer could not be queued.');
+        transferNotice.className = 'notice ok';
+        transferNotice.textContent = `${data.transfer.product_name} transfer queued for ${data.transfer.branch}.${transferQueue.length ? ` ${transferQueue.length} more queued.` : ''}`;
+        await loadStockTransfers();
+      } catch (error) {
+        transferNotice.className = 'notice error';
+        transferNotice.textContent = `${transfer.product_name} failed: ${error.message}`;
+      }
+      activeTransfer = null;
+      renderTransferQueue();
+    }
+    transferQueueProcessing = false;
+  }
+  function setBranchProductFormState(enabled) {
+    branchProductFormWrap.classList.toggle('is-open', enabled);
+    branchProductToggle.classList.toggle('is-on', enabled);
+    branchProductToggle.setAttribute('aria-pressed', String(enabled));
+    branchProductToggle.textContent = enabled ? 'Turn off new product fields' : 'Turn on new product fields';
+    branchProductForm.querySelectorAll('input, button').forEach(control => {
+      if (control === branchProductSubmit) {
+        control.disabled = !enabled;
+        return;
+      }
+      control.disabled = !enabled;
+    });
+    if (!enabled) {
+      branchProductForm.reset();
+      branchProductNotice.className = 'notice';
+      branchProductNotice.textContent = '';
+    }
+  }
+  branchProductToggle.addEventListener('click', () => setBranchProductFormState(!branchProductFormWrap.classList.contains('is-open')));
+  branchProductId.addEventListener('input', () => { const productId = Number(branchProductId.value); branchProductCode.value = Number.isSafeInteger(productId) ? String(productId + 1) : ''; });
+  function setNextBranchProductId(productId) {
+    const nextProductId = Number(productId) + 1;
+    branchProductId.value = Number.isSafeInteger(nextProductId) ? String(nextProductId) : '';
+    branchProductCode.value = Number.isSafeInteger(nextProductId) ? String(nextProductId + 1) : '';
+  }
+  setBranchProductFormState(false);
+  branchProductForm.addEventListener('submit', async event => {
+    event.preventDefault(); branchProductSubmit.disabled = true; branchProductNotice.className = 'notice'; branchProductNotice.textContent = '';
+    try {
+      if (!selectedBranch.value) throw new Error('Select a connected branch first.');
+      const response = await fetch('/api/products/create/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ branch:selectedBranch.value, product_id:document.querySelector('#branch-product-id').value, product_name:document.querySelector('#branch-product-name').value, product_code:document.querySelector('#branch-product-code').value, barcode:document.querySelector('#branch-product-barcode').value, initial_quantity:document.querySelector('#branch-product-quantity').value, selling_price:document.querySelector('#branch-product-price').value, tax_rate:document.querySelector('#branch-product-tax-rate').value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Branch product could not be queued.');
+      const branchCount = data.branches?.length ?? 1;
+      branchProductNotice.className = 'notice ok'; branchProductNotice.textContent = `${data.product_name} queued for ${branchCount} branch${branchCount === 1 ? '' : 'es'}. Offline branches will create it on their next sync.`; branchProductForm.reset(); setNextBranchProductId(data.product_id);
+    } catch (error) { branchProductNotice.className = 'notice error'; branchProductNotice.textContent = error.message; }
+    finally { branchProductSubmit.disabled = false; }
+  });
+  branchPriceForm.addEventListener('submit', async event => {
+    event.preventDefault(); branchPriceSubmit.disabled = true; branchPriceNotice.className = 'notice'; branchPriceNotice.textContent = '';
+    try {
+      if (!selectedBranch.value) throw new Error('Select a connected branch first.');
+      if (!branchPriceProduct.value || !branchPriceName.value) throw new Error('Select a branch product from the product list first.');
+      const response = await fetch('/api/stock/prices/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ branch:selectedBranch.value, product_id:branchPriceProduct.value, product_name:branchPriceName.value, selling_price:branchPriceInput.value }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Branch price update could not be queued.');
+      const branchCount = data.branch_count ?? data.branches?.length ?? 1;
+      branchPriceNotice.className = 'notice ok'; branchPriceNotice.textContent = `${data.product_name} price queued for ${branchCount} branch${branchCount === 1 ? '' : 'es'}. Each branch will apply it on its next sync.`;
+    } catch (error) { branchPriceNotice.className = 'notice error'; branchPriceNotice.textContent = error.message; }
+    finally { branchPriceSubmit.disabled = false; }
   });
   productSearches.forEach(setupProductSearch);
+  const today = new Date();
+  activityDate.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  transferLogDate.value = activityDate.value;
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.product-picker')) productSearches.forEach(control => closePickerOptions(control.options));
+  });
   refreshAll();
+  setInterval(refreshBranches, 30000);
   setInterval(() => {
-    refreshBranches();
     loadBranchProducts(false);
     loadStockMovements();
     loadStockTransfers();
   }, 30000);
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

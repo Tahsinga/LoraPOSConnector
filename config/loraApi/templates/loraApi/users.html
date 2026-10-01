@@ -93,5 +93,6 @@
   search.addEventListener('input', () => { const query = search.value.trim().toLowerCase(); users.forEach(user => { user.hidden = !user.dataset.username.includes(query); }); });
   document.querySelectorAll('.password-toggle').forEach(button => button.addEventListener('click', () => { const form = button.closest('.user').querySelector('.password-form'); form.classList.toggle('open'); button.textContent = form.classList.contains('open') ? 'Close password form' : 'Change password'; }));
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

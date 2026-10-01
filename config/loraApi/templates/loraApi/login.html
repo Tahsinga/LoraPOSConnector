@@ -15,6 +15,13 @@
     label { display:block; margin:16px 0 7px; color:#435153; font:700 11px Arial,sans-serif; letter-spacing:1px; text-transform:uppercase; }
     input { width:100%; height:46px; padding:12px 13px; color:var(--ink); background:#fbfcfa; border:1px solid #cbd7d2; border-radius:2px; outline:none; font:16px Georgia,serif; }
     input:focus { border-color:var(--teal); box-shadow:0 0 0 3px #d9efeb; }
+    .password-field { position:relative; }
+    .password-field input { padding-right:52px; }
+    .password-toggle { position:absolute; top:50%; right:4px; display:grid; place-items:center; width:40px; height:38px; margin:0; padding:8px; color:var(--muted); background:transparent; border:0; transform:translateY(-50%); }
+    .password-toggle:hover { color:var(--teal-dark); background:transparent; }
+    .password-toggle svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; }
+    .password-toggle .eye-slash { display:none; }
+    .password-toggle[aria-pressed="true"] .eye-slash { display:block; }
     button { width:100%; margin-top:22px; padding:14px 18px; color:#fff; background:var(--coral); border:0; border-radius:2px; cursor:pointer; font:700 12px Arial,sans-serif; letter-spacing:1.3px; text-transform:uppercase; }
     button:hover { background:#bd4e3e; }
     .error { margin:0 0 16px; color:#a53b2e; font:14px Arial,sans-serif; }
@@ -31,10 +38,27 @@
       <label for="id_username">Username</label>
       <input id="id_username" name="username" type="text" autocomplete="username" required autofocus>
       <label for="id_password">Password</label>
-      <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+      <div class="password-field">
+        <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+        <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false" title="Show password">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m4 4 16 16"/></svg>
+        </button>
+      </div>
       <input type="hidden" name="next" value="{{ next }}">
       <button type="submit">Sign in</button>
     </form>
   </main>
+  <script>
+    const passwordInput = document.querySelector('#id_password');
+    const passwordToggle = document.querySelector('.password-toggle');
+    passwordToggle.addEventListener('click', () => {
+      const showPassword = passwordInput.type === 'password';
+      passwordInput.type = showPassword ? 'text' : 'password';
+      passwordToggle.setAttribute('aria-pressed', String(showPassword));
+      passwordToggle.setAttribute('aria-label', showPassword ? 'Hide password' : 'Show password');
+      passwordToggle.title = showPassword ? 'Hide password' : 'Show password';
+      passwordInput.focus();
+    });
+  </script>
 </body>
 </html>

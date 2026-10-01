@@ -44,7 +44,7 @@
 <div class="shell">
   <header>
     <div><p class="eyebrow">Lora operations</p><h1>Product movements</h1></div>
-    <nav class="nav"><a href="/stock/">Main stock</a><a href="/">Sale control</a><a href="/history/">Cancellation history</a><form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></nav>
+    <nav class="nav"><a href="/stock/">Main stock</a><a href="/">Sale control</a><a href="/history/">Cancellation history</a><form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form></nav>
   </header>
   <main>
     <p class="intro">Trace when stock was added or sold, how much changed, and who or what recorded the movement.</p>
@@ -130,5 +130,6 @@
   loadBranches();
   loadMovements();
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

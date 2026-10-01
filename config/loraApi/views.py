@@ -1,6 +1,7 @@
 import hashlib
 import json
 import time
+from contextlib import nullcontext
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import wraps
@@ -11,7 +12,7 @@ from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import SetPasswordForm, UserCreationForm
 from django.core.cache import cache
-from django.db import OperationalError, ProgrammingError, close_old_connections, transaction
+from django.db import IntegrityError, OperationalError, ProgrammingError, close_old_connections, connection, transaction
 from django.db.models import Case, F, IntegerField, Max, OuterRef, Q, Subquery, Sum, When
 from django.db.models.functions import Cast
 from django.http import JsonResponse, HttpResponse
@@ -21,7 +22,6 @@ from django.utils.dateparse import parse_date, parse_datetime, parse_time
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.gzip import gzip_page
 
-from .models import BranchHeartbeat, DeletionRecord, InvoiceReprintRequest, MainStockBalance, ProductCatalog, SalesReportRequest, SalesReportSchedule, StockMovement, StockTransfer
 from .models import BranchHeartbeat, DeletionRecord, InvoiceReprintRequest, MainStockBalance, ProductCatalog, ProductDeletionRequest, SalesReportRequest, SalesReportSchedule, StockMovement, StockTransfer
 from .state_store import sync_users_to_state
 
@@ -1223,14 +1223,17 @@ def create_branch_product(request):
         barcode = str(payload.get('barcode', '')).strip()
         initial_quantity = Decimal('0')
         selling_price = Decimal(str(payload.get('selling_price', 0) or 0))
+        tax_rate = Decimal(str(payload.get('tax_rate', 0) or 0))
     except (TypeError, ValueError, InvalidOperation, json.JSONDecodeError):
         return JsonResponse({'status': 'error', 'message': 'Branch, product name, and a valid price are required.'}, status=400)
 
     if requested_product_id and requested_product_id < 12_100_000:
         return JsonResponse({'status': 'error', 'message': 'Product ID must be at least 12100000.'}, status=400)
+    if requested_product_id > 2_147_483_647:
+        return JsonResponse({'status': 'error', 'message': 'Product ID cannot exceed 2147483647.'}, status=400)
     if branch.casefold() == 'main' or not product_name or len(product_name) > 250:
         return JsonResponse({'status': 'error', 'message': 'A product name is required; Main cannot be selected as a branch.'}, status=400)
-    if len(product_code) > 50 or len(barcode) > 100 or initial_quantity < 0 or initial_quantity != whole_quantity(initial_quantity) or selling_price < 0:
+    if len(product_code) > 50 or len(barcode) > 100 or initial_quantity < 0 or initial_quantity != whole_quantity(initial_quantity) or selling_price < 0 or tax_rate < 0 or tax_rate > 100:
         return JsonResponse({'status': 'error', 'message': 'Product code, barcode, quantity, and price are invalid.'}, status=400)
 
     branch_targets = set(ProductCatalog.objects.exclude(branch__iexact='MAIN').exclude(branch='').values_list('branch', flat=True))
@@ -1271,6 +1274,7 @@ def create_branch_product(request):
                 barcode=barcode,
                 pending_stock_quantity=initial_quantity,
                 selling_price=selling_price,
+                tax_rate=tax_rate,
                 branch_confirmed=False,
                 pending_product_creation=True,
             )
@@ -1288,6 +1292,7 @@ def create_branch_product(request):
         'barcode': product.barcode,
         'initial_quantity': str(product.pending_stock_quantity),
         'selling_price': str(product.selling_price),
+        'tax_rate': str(product.tax_rate),
         'branches': branches,
     }, status=202)
 
@@ -1327,6 +1332,7 @@ def complete_branch_product_creation(request):
                     'product_code': product.product_code,
                     'barcode': product.barcode,
                     'selling_price': product.selling_price,
+                    'tax_rate': product.tax_rate,
                     'branch_confirmed': True,
                     'pending_product_creation': False,
                 },
@@ -1571,9 +1577,56 @@ def sync_product_catalog(request):
             matching_catalogs = list(ProductCatalog.objects.select_for_update().filter(
                 branch__iexact=branch,
                 product_id=product_id,
-                defaults={'available_quantity': available_quantity, 'selling_price': selling_price, 'branch_confirmed': True},
+            ).order_by('-updated_at', '-pk'))
+            catalog = next(
+                (candidate for candidate in matching_catalogs if candidate.branch == branch),
+                matching_catalogs[0] if matching_catalogs else None,
             )
+            created = catalog is None
+            if created:
+                try:
+                    with transaction.atomic():
+                        catalog = ProductCatalog.objects.create(
+                            branch=branch,
+                            product_id=product_id,
+                            available_quantity=available_quantity,
+                            selling_price=selling_price,
+                            tax_rate=tax_rate if tax_rate is not None else Decimal('0'),
+                            branch_confirmed=True,
+                        )
+                except IntegrityError:
+                    matching_catalogs = list(ProductCatalog.objects.select_for_update().filter(
+                        branch__iexact=branch,
+                        product_id=product_id,
+                    ).order_by('-updated_at', '-pk'))
+                    if not matching_catalogs:
+                        raise
+                    catalog = next(
+                        (candidate for candidate in matching_catalogs if candidate.branch == branch),
+                        matching_catalogs[0],
+                    )
+                    created = False
+
+            duplicate_ids = [candidate.pk for candidate in matching_catalogs if candidate.pk != catalog.pk]
+            for duplicate in matching_catalogs:
+                if duplicate.pk == catalog.pk:
+                    continue
+                if duplicate.pending_stock_adjustment and not catalog.pending_stock_adjustment:
+                    catalog.pending_stock_adjustment = True
+                    catalog.pending_stock_quantity = duplicate.pending_stock_quantity
+                if duplicate.pending_price_update and not catalog.pending_price_update:
+                    catalog.pending_price_update = True
+                    catalog.pending_selling_price = duplicate.pending_selling_price
+                if duplicate.sold_quantity is not None and (catalog.sold_quantity is None or duplicate.sold_quantity > catalog.sold_quantity):
+                    catalog.sold_quantity = duplicate.sold_quantity
+            if duplicate_ids:
+                ProductCatalog.objects.filter(pk__in=duplicate_ids).delete()
+            if catalog.branch != branch:
+                catalog.branch = branch
             catalog.branch_confirmed = True
+            tax_rate_changed = tax_rate is not None and catalog.tax_rate != tax_rate
+            if tax_rate is not None:
+                catalog.tax_rate = tax_rate
             previous_quantity = catalog.available_quantity
             previous_sold_quantity = catalog.sold_quantity or Decimal('0')
             stock_take_sale_sync = False

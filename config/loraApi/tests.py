@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone as datetime_timezone
 import gzip
+import re
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings

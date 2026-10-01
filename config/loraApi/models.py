@@ -165,7 +165,7 @@ class ProductDeletionRequest(models.Model):
 	class Meta:
 		ordering = ['requested_at']
 		indexes = [
-			models.Index(fields=['branch', 'status', 'updated_at']),
+			models.Index(fields=['branch', 'status', 'updated_at'], name='proddelete_branch_status_idx'),
 		]
 
 

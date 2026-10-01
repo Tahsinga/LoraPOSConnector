@@ -1,9 +1,9 @@
 from django.urls import path
 from .views import (
-    branch_status, branch_sync, cancel_sale, health_check, main_sync,
+    branch_status, branch_sync, cancel_sale, clear_sales_report_queue, dashboard_branches, dashboard_main_sync, health_check, main_sync,
     index, favicon, confirm_deletion, cancellation_history_api, request_sales_report, complete_sales_report, request_invoice_reprint, complete_invoice_reprint,
-    adjust_main_stock, create_stock_transfer, complete_stock_transfer, request_branch_price_update, complete_branch_price_update, create_branch_product, complete_branch_product_creation, product_catalog, sync_product_catalog,
-    product_sync_inbox, publish_product_catalog, stock_summary, stock_movements, product_movement_history_api, stock_transfer_logs, stock_transfer_device_logs, stock_movement_device_logs, cancellation_device_logs, record_branch_sales,
+    adjust_main_stock, create_stock_transfer, complete_stock_transfer, request_branch_price_update, update_product_tax_rate, complete_branch_price_update, create_branch_product, complete_branch_product_creation, delete_branch_product, complete_branch_product_deletion, product_catalog, deleted_products, sync_product_catalog,
+    product_sync_inbox, shared_product_catalog, publish_product_catalog, stock_summary, stock_movements, product_movement_history_api, stock_transfer_logs, stock_transfer_device_logs, stock_movement_device_logs, cancellation_device_logs, record_branch_sales, sales_report_schedules,
 )
 
 urlpatterns = [
@@ -11,11 +11,15 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('cancel-sale/', cancel_sale, name='cancel_sale'),
     path('branches/', branch_status, name='branch_status'),
+    path('dashboard/branches/', dashboard_branches, name='dashboard_branches'),
     path('branch-sync/', branch_sync, name='branch_sync'),
     path('main-sync/', main_sync, name='main_sync'),
+    path('dashboard/main-sync/', dashboard_main_sync, name='dashboard_main_sync'),
     path('confirm-deletion/', confirm_deletion, name='confirm_deletion'),
     path('cancellation-history/', cancellation_history_api, name='cancellation_history_api'),
     path('sales-report/', request_sales_report, name='request_sales_report'),
+    path('sales-report/schedules/', sales_report_schedules, name='sales_report_schedules'),
+    path('sales-report/clear-queue/', clear_sales_report_queue, name='clear_sales_report_queue'),
     path('sales-report/complete/', complete_sales_report, name='complete_sales_report'),
     path('invoice-reprint/', request_invoice_reprint, name='request_invoice_reprint'),
     path('invoice-reprint/complete/', complete_invoice_reprint, name='complete_invoice_reprint'),
@@ -23,9 +27,12 @@ urlpatterns = [
     path('stock/transfers/', create_stock_transfer, name='create_stock_transfer'),
     path('stock/transfers/complete/', complete_stock_transfer, name='complete_stock_transfer'),
     path('stock/prices/', request_branch_price_update, name='request_branch_price_update'),
+    path('products/tax-rate/', update_product_tax_rate, name='update_product_tax_rate'),
     path('stock/prices/complete/', complete_branch_price_update, name='complete_branch_price_update'),
     path('products/create/', create_branch_product, name='create_branch_product'),
     path('products/create/complete/', complete_branch_product_creation, name='complete_branch_product_creation'),
+    path('products/delete/', delete_branch_product, name='delete_branch_product'),
+    path('products/delete/complete/', complete_branch_product_deletion, name='complete_branch_product_deletion'),
     path('stock/summary/', stock_summary, name='stock_summary'),
     path('stock/movements/', stock_movements, name='stock_movements'),
     path('stock/movements/history/', product_movement_history_api, name='product_movement_history_api'),
@@ -35,7 +42,9 @@ urlpatterns = [
     path('stock/movements/device-log/', stock_movement_device_logs, name='stock_movement_device_logs'),
     path('stock/sales/', record_branch_sales, name='record_branch_sales'),
     path('products/', product_catalog, name='product_catalog'),
+    path('products/deleted/', deleted_products, name='deleted_products'),
     path('products/sync/', sync_product_catalog, name='sync_product_catalog'),
     path('products/inbox/', product_sync_inbox, name='product_sync_inbox'),
+    path('products/shared/', shared_product_catalog, name='shared_product_catalog'),
     path('products/publish/', publish_product_catalog, name='publish_product_catalog'),
 ]

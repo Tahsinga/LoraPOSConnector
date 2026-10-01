@@ -22,12 +22,17 @@ class DeletionRecord(models.Model):
 
 	class Meta:
 		ordering = ['timestamp']
+		indexes = [
+			models.Index(fields=['status', 'timestamp']),
+			models.Index(fields=['status', 'confirmation_timestamp']),
+		]
 
 
 class SalesReportRequest(models.Model):
 	request_id = models.CharField(max_length=255, primary_key=True)
 	branch = models.CharField(max_length=255)
 	report_date = models.DateField()
+	scheduled_at = models.DateTimeField(null=True, blank=True)
 	status = models.CharField(max_length=20, default='pending')
 	requested_by = models.CharField(max_length=255, blank=True, default='')
 	requested_at = models.DateTimeField(auto_now_add=True)
@@ -37,6 +42,20 @@ class SalesReportRequest(models.Model):
 
 	class Meta:
 		ordering = ['-requested_at']
+
+
+class SalesReportSchedule(models.Model):
+	branch = models.CharField(max_length=255)
+	report_time = models.TimeField()
+	timezone = models.CharField(max_length=64, default='UTC')
+	last_queued_date = models.DateField(null=True, blank=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ['branch', 'report_time']
+		constraints = [
+			models.UniqueConstraint(fields=['branch', 'report_time'], name='uniq_sales_report_branch_time'),
+		]
 
 
 class InvoiceReprintRequest(models.Model):
@@ -79,6 +98,10 @@ class StockTransfer(models.Model):
 
 	class Meta:
 		ordering = ['created_at']
+		indexes = [
+			models.Index(fields=['branch', 'created_at']),
+			models.Index(fields=['branch', 'product_id', 'created_at']),
+		]
 
 
 class StockMovement(models.Model):
@@ -93,6 +116,10 @@ class StockMovement(models.Model):
 
 	class Meta:
 		ordering = ['created_at']
+		indexes = [
+			models.Index(fields=['created_at']),
+			models.Index(fields=['branch', 'created_at']),
+		]
 
 
 class ProductCatalog(models.Model):
@@ -115,6 +142,40 @@ class ProductCatalog(models.Model):
 
 	class Meta:
 		ordering = ['product_name', 'product_id']
+		indexes = [
+			models.Index(fields=['branch', 'branch_confirmed']),
+			models.Index(fields=['branch', 'product_name']),
+		]
 		constraints = [
 			models.UniqueConstraint(fields=['branch', 'product_id'], name='unique_branch_product'),
+		]
+
+
+class ProductDeletionRequest(models.Model):
+	STATUS_CHOICES = [('pending', 'Pending'), ('completed', 'Completed'), ('failed', 'Failed')]
+	branch = models.CharField(max_length=255)
+	product_id = models.IntegerField()
+	product_name = models.CharField(max_length=250, blank=True, default='')
+	requested_by = models.CharField(max_length=255, blank=True, default='')
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+	error = models.TextField(blank=True, default='')
+	requested_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ['requested_at']
+		indexes = [
+			models.Index(fields=['branch', 'status', 'updated_at']),
+		]
+
+
+class BranchHeartbeat(models.Model):
+	branch = models.CharField(max_length=255, unique=True)
+	device_role = models.CharField(max_length=50, default='Branch PC')
+	last_seen = models.DateTimeField()
+
+	class Meta:
+		ordering = ['branch']
+		indexes = [
+			models.Index(fields=['last_seen']),
 		]

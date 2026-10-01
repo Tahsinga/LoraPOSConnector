@@ -44,7 +44,7 @@
 <div class="shell">
   <header>
     <div><p class="eyebrow">Lora operations</p><h1>Product movements</h1></div>
-    <nav class="nav"><a href="/stock/">Main stock</a><a href="/">Sale control</a><a href="/history/">Cancellation history</a><form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></nav>
+    <nav class="nav"><a href="/stock/">Main stock</a><a href="/">Sale control</a><a href="/history/">Cancellation history</a><form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form></nav>
   </header>
   <main>
     <p class="intro">Trace when stock was added or sold, how much changed, and who or what recorded the movement.</p>
@@ -107,8 +107,11 @@
     try {
       const response = await fetch('/api/branches/', { cache: 'no-store' });
       const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Branches unavailable.');
       const branches = data.branches || [];
-      branchSelect.innerHTML = '<option value="">Select branch first</option><option value="MAIN">Main stock</option>' + branches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('');
+      const selected = branchSelect.value;
+      branchSelect.innerHTML = '<option value="">' + (branches.length ? 'Select branch first' : 'Waiting for online branches...') + '</option><option value="MAIN">Main stock</option>' + branches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('');
+      if ([...branchSelect.options].some(option => option.value === selected)) branchSelect.value = selected;
     } catch (error) {
       branchSelect.innerHTML = '<option value="">Branches unavailable</option>';
     }
@@ -128,7 +131,9 @@
   filters.addEventListener('submit', event => { event.preventDefault(); loadMovements(); });
   branchSelect.addEventListener('change', async () => { await loadProducts(); loadMovements(); });
   loadBranches();
+  setInterval(loadBranches, 10000);
   loadMovements();
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

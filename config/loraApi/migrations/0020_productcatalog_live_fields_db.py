@@ -13,7 +13,7 @@ def add_missing_catalog_columns(apps, schema_editor):
     columns = {
         'pending_selling_price': 'decimal NULL',
         'tax_rate': 'decimal NOT NULL DEFAULT 0',
-        'pending_product_creation': 'boolean NOT NULL DEFAULT 0',
+        'pending_product_creation': 'boolean NOT NULL DEFAULT FALSE',
     }
     for column_name, definition in columns.items():
         if column_name not in existing_columns:

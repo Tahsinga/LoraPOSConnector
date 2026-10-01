@@ -1,0 +1,14 @@
+{% load static %}
+<style>
+  #api-bandwidth-meter { position:fixed; top:14px; right:14px; z-index:40; display:flex; align-items:baseline; gap:8px; padding:9px 12px; color:#182326; background:#fff; border:1px solid #dbe3df; box-shadow:0 4px 16px rgba(28,62,54,.14); font:12px Arial,sans-serif; text-decoration:none; }
+  #api-bandwidth-meter strong { color:#075d5a; font-size:14px; }
+  #api-bandwidth-meter small { color:#6d7b7d; font-size:11px; }
+  #api-bandwidth-meter:hover { border-color:#087f78; }
+  @media (max-width:520px) { #api-bandwidth-meter { top:auto; right:8px; bottom:80px; gap:6px; padding:7px 9px; font-size:11px; } }
+</style>
+<a id="api-bandwidth-meter" href="/bandwidth/" aria-label="View API bandwidth details" title="View browser-measured API response transfer today. Request uploads are not included.">
+  <span>API received today</span>
+  <strong data-bandwidth-bytes>0 B</strong>
+  <small data-bandwidth-count>0 responses</small>
+</a>
+<script src="{% static 'loraApi/bandwidth.js' %}" defer></script>

@@ -52,7 +52,7 @@
 <div class="shell">
   <header>
     <div><p class="eyebrow">Lora operations</p><h1>Cancellation history</h1></div>
-    <div><a class="back" href="/">Back to sale control</a>{% if user.is_superuser %} <a class="back" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form"><button type="submit" class="logout-button">Sign out</button></form></div>
+    <div><a class="back" href="/">Back to sale control</a>{% if user.is_superuser %} <a class="back" href="/users/">User accounts</a>{% endif %}<form method="post" action="/logout/" class="logout-form">{% csrf_token %}<button type="submit" class="logout-button">Sign out</button></form></div>
   </header>
   <main>
     <div class="toolbar">
@@ -112,5 +112,6 @@
   loadHistory();
   setInterval(loadHistory, 30000);
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

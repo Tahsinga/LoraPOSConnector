@@ -12,7 +12,7 @@ def add_branch_confirmation_column(apps, schema_editor):
     }
     if 'branch_confirmed' not in existing_columns:
         schema_editor.execute(
-            f'ALTER TABLE {table_name} ADD COLUMN {schema_editor.quote_name("branch_confirmed")} boolean NOT NULL DEFAULT 1'
+            f'ALTER TABLE {table_name} ADD COLUMN {schema_editor.quote_name("branch_confirmed")} boolean NOT NULL DEFAULT TRUE'
         )
 
 

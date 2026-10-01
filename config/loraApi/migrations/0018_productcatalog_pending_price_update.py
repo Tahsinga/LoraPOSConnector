@@ -13,7 +13,7 @@ def add_pending_price_update_column(apps, schema_editor):
     }
     if 'pending_price_update' not in columns:
         schema_editor.execute(
-            f'ALTER TABLE {table_name} ADD COLUMN {column_name} boolean NOT NULL DEFAULT 0'
+            f'ALTER TABLE {table_name} ADD COLUMN {column_name} boolean NOT NULL DEFAULT FALSE'
         )
 
 

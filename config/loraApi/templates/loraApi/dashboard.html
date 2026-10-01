@@ -54,11 +54,36 @@
     .reprint-button:hover { background:var(--teal-dark); }
     .queue { margin-top:20px; }
     .report-panel { grid-column:1; grid-row:2; margin-top:20px; }
+    .schedule-dialog { width:min(520px, calc(100% - 28px)); max-height:calc(100dvh - 28px); padding:0; color:var(--ink); background:var(--white); border:1px solid var(--line); box-shadow:0 22px 70px rgba(12,38,34,.28); }
+    .schedule-dialog::backdrop { background:rgba(13,29,30,.48); }
+    .schedule-dialog-inner { display:grid; gap:14px; padding:20px; }
+    .schedule-dialog h2 { margin:0; font:500 24px Georgia,serif; }
+    .schedule-dialog .sub { margin:0; color:var(--muted); font:13px/1.45 Arial,sans-serif; }
+    .schedule-branch-list { display:grid; gap:7px; max-height:48dvh; overflow:auto; }
+    .schedule-branch-row { display:grid; grid-template-columns:20px minmax(0,1fr) minmax(170px,1.4fr); align-items:center; gap:10px; padding:8px 10px; background:#f5f8f5; border:1px solid var(--line); text-transform:none; letter-spacing:0; }
+    .schedule-branch-row strong { overflow-wrap:anywhere; font:600 14px Arial,sans-serif; text-transform:none; }
+    .schedule-branch-row input[type="checkbox"] { width:18px; height:18px; margin:0; padding:0; accent-color:var(--teal); }
+    .schedule-branch-row input[type="time"] { height:36px; }
+    .schedule-branch-row input[type="time"]:disabled { opacity:.5; }
+    .daily-time-slots { display:grid; gap:6px; min-width:0; }
+    .daily-time-slot { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:6px; }
+    .schedule-branch-row .add-time-slot, .schedule-branch-row .remove-time-slot { grid-column:auto; margin:0; padding:7px 9px; font:700 10px Arial,sans-serif; letter-spacing:0; text-transform:none; }
+    .schedule-branch-row .add-time-slot { color:var(--teal-dark); background:#e1f0eb; }
+    .schedule-branch-row .add-time-slot:hover { background:#cce7df; }
+    .schedule-branch-row .remove-time-slot { color:#8b2d20; background:#f7e3de; }
+    .schedule-branch-row .remove-time-slot:hover { background:#f0d2ca; }
+    .schedule-dialog-actions { display:flex; justify-content:flex-end; gap:9px; }
+    .schedule-dialog-actions button { grid-column:auto; margin:0; padding:11px 14px; }
+    .schedule-cancel { color:var(--ink); background:#e8eeeb; }
+    .schedule-cancel:hover { background:#dce6e1; }
     .queue { grid-column:2; grid-row:1; margin-top:0; }
-    .queue-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+    .queue-head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
     .queue-head h2 { margin:0; }
     .history-button { display:inline-block; padding:9px 12px; color:var(--teal-dark); background:#e1f0eb; border:0; border-radius:2px; font:700 10px Arial,sans-serif; letter-spacing:1px; text-decoration:none; text-transform:uppercase; }
     .history-button:hover { background:#cce7df; }
+    .clear-report-queue { padding:9px 12px; color:#8b2d20; background:#f7e3de; border:0; border-radius:2px; font:700 10px Arial,sans-serif; text-transform:uppercase; }
+    .clear-report-queue:hover { background:#f0d2ca; }
+    .queue-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
     .refresh { padding:8px 11px; color:var(--teal-dark); background:#e1f0eb; font-size:10px; }
     .refresh:hover { background:#cce7df; }
     .rows { display:grid; gap:9px; }
@@ -67,8 +92,12 @@
     .row small { display:block; margin-top:4px; color:var(--muted); }
     .badge { align-self:start; padding:5px 8px; color:#8b651d; background:#fff3d4; font:700 10px Arial,sans-serif; letter-spacing:.8px; text-transform:uppercase; }
     .badge.confirmed { color:#176342; background:#dff2e7; }
+    .badge.scheduled { color:#8b651d; background:#fff3d4; }
+    .badge.processing { color:#245a82; background:#dcecf8; }
+    .badge.printed { color:#176342; background:#dff2e7; }
+    .badge.failed { color:#9c352b; background:#fbe1dd; }
     .empty { padding:18px 0 4px; color:var(--muted); font:14px Arial,sans-serif; }
-    @media (max-width:760px) { header { display:block; padding-top:28px; } .live { gap:5px; margin-top:20px; font-size:9px; letter-spacing:.5px; } .history-link, .logout-button { font-size:9px; letter-spacing:.5px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel { padding:20px; } .report-panel, .queue { grid-column:auto; grid-row:auto; margin-top:20px; } form { grid-template-columns:1fr; } .wide { grid-column:auto; } button { grid-column:auto; } }
+    @media (max-width:760px) { header { display:block; padding-top:28px; } .live { gap:5px; margin-top:20px; font-size:9px; letter-spacing:.5px; } .history-link, .logout-button { font-size:9px; letter-spacing:.5px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel { padding:20px; } .report-panel, .queue { grid-column:auto; grid-row:auto; margin-top:20px; } form { grid-template-columns:1fr; } .wide { grid-column:auto; } button { grid-column:auto; } .schedule-branch-row { grid-template-columns:20px minmax(0,1fr); } .daily-time-slots { grid-column:1/-1; } }
   </style>
 </head>
 <body>
@@ -104,14 +133,28 @@
           <small id="branch-help" class="sub">Select one or more branches.</small>
           <button id="report-submit" type="submit">Run and print report</button>
         </form>
+        <button id="report-schedule" class="reprint-button" type="button">Set daily print times</button>
         <div id="report-notice" class="notice" role="status"></div>
       </div>
       <div class="panel queue">
-        <div class="queue-head"><h2>Branch queue</h2><div><a class="history-button" href="/history/">View cancelled invoices</a><button class="refresh" id="refresh" type="button">Refresh</button></div></div>
+        <div class="queue-head"><h2>Branch queue</h2><div class="queue-actions"><a class="history-button" href="/history/">View cancelled invoices</a>{% if user.is_staff %}<button class="clear-report-queue" id="clear-report-queue" type="button">Clear pending/failed reports</button>{% endif %}<button class="refresh" id="refresh" type="button">Refresh</button></div></div>
         <div id="rows" class="rows"><div class="empty">Loading queue...</div></div>
       </div>
     </section>
   </main>
+  {% if user.is_staff %}<form id="report-cleanup-token" hidden>{% csrf_token %}</form>{% endif %}
+  <dialog id="report-schedule-dialog" class="schedule-dialog" aria-labelledby="schedule-dialog-title">
+    <div class="schedule-dialog-inner">
+      <h2 id="schedule-dialog-title">Daily report times</h2>
+      <p class="sub">Select a branch and add one or more daily print times. Dashboard branch checks are only for printing now.</p>
+      <div id="schedule-branch-list" class="schedule-branch-list"><p class="sub">Loading branches...</p></div>
+      <div id="schedule-notice" class="notice" role="status"></div>
+      <div class="schedule-dialog-actions">
+        <button id="schedule-cancel" class="schedule-cancel" type="button">Cancel</button>
+        <button id="schedule-save" type="button">Save daily times</button>
+      </div>
+    </div>
+  </dialog>
 </div>
 <script>
   const form = document.querySelector('#cancel-form');
@@ -121,11 +164,17 @@
   const reportForm = document.querySelector('#report-form');
   const reportNotice = document.querySelector('#report-notice');
   const reportSubmit = document.querySelector('#report-submit');
+  const reportSchedule = document.querySelector('#report-schedule');
+  const scheduleDialog = document.querySelector('#report-schedule-dialog');
+  const scheduleBranchList = document.querySelector('#schedule-branch-list');
+  const scheduleNotice = document.querySelector('#schedule-notice');
+  const scheduleSave = document.querySelector('#schedule-save');
   const allBranches = document.querySelector('#all-branches');
   const rows = document.querySelector('#rows');
   const branchSelect = document.querySelector('#branch');
   const reportBranches = document.querySelector('#report-branches');
   const reportSelectionKey = 'lora-report-branch-selection';
+  let connectedBranches = [];
   const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   function loadReportSelection() {
     try { return JSON.parse(localStorage.getItem(reportSelectionKey) || '{"branches":[],"all":false}'); }
@@ -147,18 +196,44 @@
   }
   async function refreshQueue() {
     try {
-      const response = await fetch('/api/main-sync/');
+      const response = await fetch('/api/dashboard/main-sync/');
       const data = await response.json();
       document.querySelector('#pending').textContent = data.pending_count ?? 0;
       document.querySelector('#processed').textContent = data.processed_count ?? 0;
-      const items = data.pending_deletions ?? [];
-      rows.innerHTML = items.length ? items.map(item => `<div class="row"><div><b>${escapeHtml(item.invoice)}</b><small>${escapeHtml(item.branch)} · Whole invoice</small></div><span class="badge">Pending</span></div>`).join('') : '<div class="empty">No cancellations are waiting.</div>';
+      const items = data.queue ?? (data.pending_deletions ?? []).map(item => ({ type: 'cancellation', branch: item.branch, label: `Cancellation ${item.invoice}`, detail: 'Whole invoice', status: item.status }));
+      const statusLabels = { scheduled: 'Scheduled', pending: 'Queued', processing: 'Sent', printed: 'Printed', failed: 'Failed', processed: 'Completed' };
+      rows.innerHTML = items.length ? items.map(item => `<div class="row"><div><b>${escapeHtml(item.label)}</b><small>${escapeHtml(item.branch)} · ${escapeHtml(item.detail)}${item.scheduled_at ? ` · ${escapeHtml(new Date(item.scheduled_at).toLocaleString())}` : ''}</small></div><span class="badge ${escapeHtml(item.status)}">${escapeHtml(statusLabels[item.status] || item.status)}</span></div>`).join('') : '<div class="empty">No commands are waiting or recently completed.</div>';
     } catch (error) { rows.innerHTML = '<div class="empty">Queue unavailable. Try again.</div>'; }
+  }
+  const clearReportQueue = document.querySelector('#clear-report-queue');
+  if (clearReportQueue) {
+    clearReportQueue.addEventListener('click', async () => {
+      if (!window.confirm('Delete all pending and failed sales reports? Other queue items will not be changed.')) return;
+      clearReportQueue.disabled = true;
+      try {
+        const csrfToken = document.querySelector('#report-cleanup-token [name=csrfmiddlewaretoken]').value;
+        const response = await fetch('/api/sales-report/clear-queue/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrfToken },
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Sales report queue could not be cleared.');
+        reportNotice.className = 'notice ok';
+        reportNotice.textContent = `Deleted ${data.deleted_count} pending or failed sales report(s).`;
+        await refreshQueue();
+      } catch (error) {
+        reportNotice.className = 'notice error';
+        reportNotice.textContent = error.message;
+      } finally {
+        clearReportQueue.disabled = false;
+      }
+    });
   }
   async function refreshBranches() {
     try {
-      const response = await fetch('/api/branches/');
+      const response = await fetch('/api/dashboard/branches/');
       const data = await response.json();
+      connectedBranches = data.branches?.map(branch => branch.name) ?? [];
       const selected = branchSelect.value;
       branchSelect.innerHTML = data.branches?.length
         ? '<option value="">Select connected branch</option>' + data.branches.map(branch => `<option value="${escapeHtml(branch.name)}">${escapeHtml(branch.name)}</option>`).join('')
@@ -212,6 +287,118 @@
     } catch (error) { reportNotice.className = 'notice error'; reportNotice.textContent = error.message; }
     finally { reportSubmit.disabled = false; }
   });
+  function renderScheduleBranches(schedules) {
+    const savedByBranch = new Map();
+    schedules.forEach(schedule => {
+      const key = schedule.branch.toLocaleLowerCase();
+      if (!savedByBranch.has(key)) savedByBranch.set(key, []);
+      savedByBranch.get(key).push(schedule);
+    });
+    const branchNames = [...new Set([...connectedBranches, ...schedules.map(schedule => schedule.branch)])]
+      .sort((left, right) => left.localeCompare(right));
+    scheduleBranchList.innerHTML = branchNames.length
+      ? branchNames.map(branch => {
+        const saved = savedByBranch.get(branch.toLocaleLowerCase()) ?? [];
+        const enabled = saved.length > 0;
+        return `<div class="schedule-branch-row" data-branch="${escapeHtml(branch)}"><input class="daily-schedule-enabled" type="checkbox"${enabled ? ' checked' : ''} aria-label="Schedule daily reports for ${escapeHtml(branch)}"><strong>${escapeHtml(branch)}</strong><div class="daily-time-slots"><button class="add-time-slot" type="button"${enabled ? '' : ' disabled'}>Add time</button></div></div>`;
+      }).join('')
+      : '<p class="sub">No branches are connected and no saved schedules exist.</p>';
+    scheduleBranchList.querySelectorAll('.schedule-branch-row').forEach(row => {
+      const saved = savedByBranch.get(row.dataset.branch.toLocaleLowerCase()) ?? [];
+      (saved.length ? saved : [{ time: '' }]).forEach(schedule => addDailyTimeSlot(row, schedule.time));
+      updateDailyTimeSlotButtons(row);
+    });
+  }
+  function addDailyTimeSlot(branchRow, value = '') {
+    const slots = branchRow.querySelector('.daily-time-slots');
+    const slot = document.createElement('div');
+    slot.className = 'daily-time-slot';
+    const input = document.createElement('input');
+    input.className = 'daily-time-input';
+    input.type = 'time';
+    input.value = value;
+    input.dataset.branch = branchRow.dataset.branch;
+    input.disabled = !branchRow.querySelector('.daily-schedule-enabled').checked;
+    input.setAttribute('aria-label', `Daily print time ${slots.querySelectorAll('.daily-time-slot').length + 1} for ${branchRow.dataset.branch}`);
+    const remove = document.createElement('button');
+    remove.className = 'remove-time-slot';
+    remove.type = 'button';
+    remove.textContent = 'Remove';
+    slot.append(input, remove);
+    slots.insertBefore(slot, slots.querySelector('.add-time-slot'));
+  }
+  function updateDailyTimeSlotButtons(branchRow) {
+    const slots = branchRow.querySelectorAll('.daily-time-slot');
+    const enabled = branchRow.querySelector('.daily-schedule-enabled').checked;
+    branchRow.querySelector('.add-time-slot').disabled = !enabled;
+    slots.forEach((slot, index) => {
+      slot.querySelector('.remove-time-slot').disabled = !enabled || slots.length === 1;
+      slot.querySelector('.daily-time-input').setAttribute('aria-label', `Daily print time ${index + 1} for ${branchRow.dataset.branch}`);
+    });
+  }
+  reportSchedule.addEventListener('click', async () => {
+    scheduleNotice.className = 'notice'; scheduleNotice.textContent = '';
+    scheduleBranchList.innerHTML = '<p class="sub">Loading branches...</p>';
+    scheduleDialog.showModal();
+    try {
+      const response = await fetch('/api/sales-report/schedules/');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Daily schedules could not be loaded.');
+      renderScheduleBranches(data.schedules ?? []);
+    } catch (error) {
+      scheduleBranchList.innerHTML = '';
+      scheduleNotice.className = 'notice error'; scheduleNotice.textContent = error.message;
+    }
+  });
+  document.querySelector('#schedule-cancel').addEventListener('click', () => scheduleDialog.close());
+  scheduleBranchList.addEventListener('change', event => {
+    if (event.target.matches('.daily-schedule-enabled')) {
+      const branchRow = event.target.closest('.schedule-branch-row');
+      branchRow.querySelectorAll('.daily-time-input').forEach(input => input.disabled = !event.target.checked);
+      updateDailyTimeSlotButtons(branchRow);
+    }
+  });
+  scheduleBranchList.addEventListener('click', event => {
+    const branchRow = event.target.closest('.schedule-branch-row');
+    if (!branchRow) return;
+    if (event.target.closest('.add-time-slot')) {
+      addDailyTimeSlot(branchRow);
+      updateDailyTimeSlotButtons(branchRow);
+    } else if (event.target.closest('.remove-time-slot')) {
+      const slots = branchRow.querySelectorAll('.daily-time-slot');
+      if (slots.length === 1) slots[0].querySelector('.daily-time-input').value = '';
+      else event.target.closest('.daily-time-slot').remove();
+      updateDailyTimeSlotButtons(branchRow);
+    }
+  });
+  scheduleSave.addEventListener('click', async () => {
+    scheduleSave.disabled = true; scheduleNotice.className = 'notice'; scheduleNotice.textContent = '';
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const enabledRows = [...scheduleBranchList.querySelectorAll('.schedule-branch-row')]
+      .filter(row => row.querySelector('.daily-schedule-enabled').checked);
+    if (enabledRows.some(row => [...row.querySelectorAll('.daily-time-input')].some(input => !input.value))) {
+      scheduleNotice.className = 'notice error'; scheduleNotice.textContent = 'Set a time for every daily slot.';
+      scheduleSave.disabled = false;
+      return;
+    }
+    const schedules = enabledRows.flatMap(row => [...row.querySelectorAll('.daily-time-input')].map(input => ({
+      branch: input.dataset.branch,
+      time: input.value,
+      timezone: timeZone,
+    })));
+    try {
+      const response = await fetch('/api/sales-report/schedules/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedules }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Daily schedules could not be saved.');
+      reportNotice.className = 'notice ok'; reportNotice.textContent = data.message;
+      scheduleDialog.close();
+    } catch (error) {
+      scheduleNotice.className = 'notice error'; scheduleNotice.textContent = error.message;
+    } finally { scheduleSave.disabled = false; }
+  });
   allBranches.addEventListener('change', () => {
     reportBranches.classList.toggle('is-disabled', allBranches.checked);
     if (allBranches.checked) reportBranches.querySelectorAll('.branch-option-input').forEach(input => input.checked = false);
@@ -222,7 +409,8 @@
   const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   document.querySelector('#report-date').value = localDate;
   document.querySelector('#refresh').addEventListener('click', refreshQueue);
-  refreshQueue(); refreshBranches(); setInterval(refreshQueue, 8000); setInterval(refreshBranches, 8000);
+  refreshQueue(); refreshBranches(); setInterval(refreshQueue, 8000); setInterval(refreshBranches, 5000);
 </script>
+{% include 'loraApi/_bandwidth_meter.html' %}
 </body>
 </html>

@@ -4,15 +4,28 @@ services:
     runtime: python
     pythonVersion: 3.13
     buildCommand: |
+      pip install --upgrade pip
       pip install -r requirements.txt
       python config/manage.py migrate --noinput
+      python config/manage.py restore_seed_state
       python config/manage.py collectstatic --noinput
     startCommand: |
-      cd config && python manage.py migrate --noinput && python manage.py restore_seed_state && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --worker-class sync --timeout 60
+      python config/manage.py migrate --noinput &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread --preload --timeout 60 --graceful-timeout 30
     envVars:
       - key: PYTHON_VERSION
         value: 3.13
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
+      - key: DEBUG
+        value: "False"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"
       - key: ALLOWED_HOSTS
-        value: loraapi.onrender.com,lora-api.onrender.com
+        value: loraapi.onrender.com,lora-api.onrender.com,localhost,127.0.0.1
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://loraapi.onrender.com,https://lora-api.onrender.com

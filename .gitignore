@@ -1,6 +1,7 @@
 venv/
 __pycache__/
 *.py[cod]
+staticfiles/
 config/db.sqlite3
 config/db.sqlite3-shm
 config/db.sqlite3-wal

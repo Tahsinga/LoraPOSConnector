@@ -136,7 +136,35 @@
     .section-jump-button.visible { display:block; }
     .section-jump-button:hover { background:var(--coral); }
     #products-panel, #stock-activity-panel { scroll-margin-top:24px; }
-    @media (max-width:760px) { header { display:block; padding:28px 16px 24px; } .nav { justify-content:flex-start; margin-top:20px; gap:10px; } main { padding:0 16px 36px; } .workspace { grid-template-columns:1fr; } .panel, .panel-wide { grid-column:auto; padding:20px; } form { grid-template-columns:1fr; } .transfer-panel .transfer-form { grid-template-columns:1fr; } .transfer-panel .transfer-form button { grid-column:1/-1; } button { grid-column:auto; } .browser-heading { display:block; } .catalog-status { display:block; margin-top:8px; } .product-row { grid-template-columns:1fr; gap:8px; } }
+    @media (max-width:760px) {
+      header { display:block; padding:24px 14px 20px; }
+      h1 { font-size:40px; white-space:normal; }
+      .nav { justify-content:flex-start; gap:10px 14px; margin-top:18px; }
+      .nav-link, .logout-button { font-size:11px; }
+      main { padding:0 12px 32px; }
+      .intro { font-size:13px; }
+      .workspace { grid-template-columns:1fr; gap:12px; }
+      .panel, .panel-wide { grid-column:auto; padding:16px; }
+      h2 { font-size:22px; }
+      .sub { font-size:13px; margin-bottom:16px; }
+      form, .transfer-panel .transfer-form { grid-template-columns:1fr; gap:11px; }
+      input, select { height:44px; font-size:16px; }
+      button, .transfer-panel .transfer-form button { width:100%; min-height:44px; grid-column:1/-1; margin-top:0; }
+      .branch-load-row { gap:10px; }
+      .branch-load-actions { flex-direction:column; gap:8px; }
+      .branch-load-actions button { width:100%; }
+      .toggle-row { flex-direction:column; align-items:stretch; gap:9px; margin:10px 0 14px; }
+      .toggle-button { width:100%; min-width:0; }
+      .browser-heading { display:block; }
+      .browser-actions { display:grid; grid-template-columns:1fr; gap:10px; justify-content:stretch; }
+      .activity-branch-label, .activity-date-label { display:flex; flex-direction:column; align-items:stretch; gap:6px; white-space:normal; }
+      .activity-branch-label select, .activity-date-label input { width:100%; min-width:0; }
+      .catalog-status { display:block; margin-top:8px; }
+      .stock-table, .movement-table, .transfer-table { font-size:12px; }
+      .stock-table th, .stock-table td, .movement-table th, .movement-table td, .transfer-table th, .transfer-table td { padding:10px 9px; }
+      .stock-table .product-name { font-size:14px; }
+      .section-jump-button { right:12px; bottom:12px; }
+    }
   </style>
 </head>
 <body>
@@ -251,6 +279,7 @@
   const activityDate = document.querySelector('#activity-date');
   const movementStatus = document.querySelector('#movement-status');
   const stockTransfers = document.querySelector('#stock-transfers');
+  const branchLoadingCards = [...document.querySelectorAll('[data-branch-loading-card]')];
   const transferStatus = document.querySelector('#transfer-status');
   const transferLogDate = document.querySelector('#transfer-log-date');
   const mainStockForm = document.querySelector('#main-stock-form');
@@ -541,11 +570,17 @@
     loadStockTransfers();
   });
   async function refreshBranches() {
+    const requestId = ++branchRefreshRequestId;
+    branchRefreshController?.abort();
+    const controller = new AbortController();
+    branchRefreshController = controller;
     try {
       const previousBranch = selectedBranch.value;
       const currentBranch = selectedBranch.value || localStorage.getItem(selectedBranchKey) || '';
       const response = await fetch(`/api/branches/?_=${Date.now()}`, { cache: 'no-store' });
       const data = await response.json();
+      if (requestId !== branchRefreshRequestId) return;
+      const currentBranch = selectedBranch.value || localStorage.getItem(selectedBranchKey) || '';
       const branches = data.branches || [];
       const availableBranches = branches.filter(branch => branch.online === true);
       const currentBranchOption = currentBranch && !availableBranches.some(branch => branch.name === currentBranch)
@@ -561,8 +596,11 @@
       if (currentBranch && [...activityBranch.options].some(option => option.value === currentBranch)) activityBranch.value = currentBranch;
       if (selectedBranch.value && selectedBranch.value !== previousBranch) selectedBranch.dispatchEvent(new Event('change'));
     } catch (error) {
+      if (error.name === 'AbortError' || requestId !== branchRefreshRequestId) return;
       if (!selectedBranch.options.length) selectedBranch.innerHTML = '<option value="">Branches unavailable</option>';
       if (!activityBranch.options.length) activityBranch.innerHTML = '<option value="">Branches unavailable</option>';
+    } finally {
+      if (requestId === branchRefreshRequestId) branchRefreshController = null;
     }
   }
   function setBranchCardsLoading(isLoading) {
@@ -586,15 +624,16 @@
       applySelectedProduct();
       clearTimeout(timer);
       timer = setTimeout(async () => {
-        const query = control.input.value.trim();
-        const sourceBranch = control.source === 'main' ? 'MAIN' : selectedBranch.value;
+        const searchQuery = control.input.value.trim();
+        const sourceBranch = selectedBranch.value;
         if (!sourceBranch) { control.list.innerHTML = ''; return; }
-        if (query.length < 2) { control.list.innerHTML = ''; return; }
+        if (searchQuery.length < 2) { control.list.innerHTML = ''; return; }
         try {
-          const response = await fetch(`/api/products/?q=${encodeURIComponent(query)}&branch=${encodeURIComponent(sourceBranch)}&_=${Date.now()}`, { cache: 'no-store' });
+          const response = await fetch(`/api/products/?q=${encodeURIComponent(searchQuery)}&branch=${encodeURIComponent(sourceBranch)}&_=${Date.now()}`, { cache: 'no-store' });
           const data = await response.json();
-          products = data.products || [];
+          products = (data.products || filterProducts(searchQuery.toLowerCase())).filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(searchQuery.toLowerCase()))).slice(0, 100);
           control.list.innerHTML = productOptions(products);
+          if (control.options) renderPickerOptions(control.options, products);
         } catch (error) { control.list.innerHTML = ''; }
       }, 180);
     });
@@ -781,7 +820,7 @@
         transferName.value = typedProduct.product_name;
       }
       if (!selectedBranch.value) throw new Error('Select a connected branch first.');
-      if (!transferProduct.value || !transferName.value) throw new Error('Select a product from the Main POS product list first.');
+      if (!transferProduct.value || !transferName.value) throw new Error('Select a product from the selected branch product list first.');
       if (!Number.isFinite(Number(transferQuantity)) || Number(transferQuantity) <= 0) throw new Error('Enter a positive transfer quantity.');
       transferQueue.push({ product_id: transferProduct.value, product_name: transferName.value, quantity: transferQuantity, branch: selectedBranch.value });
       transferForm.reset(); transferSearch.focus();

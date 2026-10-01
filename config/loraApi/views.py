@@ -68,7 +68,8 @@ def invalidate_product_catalog_cache():
 def retry_on_database_lock(view_func):
     @wraps(view_func)
     def wrapped_view(request, *args, **kwargs):
-        with PRODUCT_SYNC_QUEUE:
+        sync_lock = PRODUCT_SYNC_QUEUE if connection.vendor == 'sqlite' else nullcontext()
+        with sync_lock:
             for attempt in range(5):
                 try:
                     close_old_connections()
@@ -126,6 +127,7 @@ def report_payload(report):
         'id': report.request_id,
         'branch': report.branch,
         'report_date': report.report_date.isoformat(),
+        'scheduled_at': report.scheduled_at.isoformat() if report.scheduled_at else None,
         'status': report.status,
         'requested_at': report.requested_at.timestamp(),
         'scheduled_at': report.scheduled_at.isoformat() if report.scheduled_at else None,
@@ -186,6 +188,7 @@ def product_payload(product):
         'barcode': product.barcode,
         'available_quantity': str(product.available_quantity),
         'selling_price': str(product.selling_price),
+        'tax_rate': str(product.tax_rate),
     }
 
 
@@ -233,10 +236,13 @@ def stock_summary_payload(product, branch):
 def index(request):
     """Browser dashboard for managing branch sale cancellations."""
     cleanup_queues()
-    return render(request, 'loraApi/dashboard.html', {
+    response = render(request, 'loraApi/dashboard.html', {
         'pending_count': DeletionRecord.objects.filter(status__in=['pending', 'processing']).count(),
         'processed_count': DeletionRecord.objects.filter(status='processed').count(),
     })
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    return response
 
 
 @login_required(login_url='/login/')
@@ -460,6 +466,12 @@ def request_sales_report(request):
         branches = [branch['name'] for branch in CONNECTED_BRANCHES.values()]
     branches = sorted(set(branches), key=str.casefold)
     report_date = parse_date(str(payload.get('report_date', '')).strip())
+    scheduled_at_value = payload.get('scheduled_at')
+    scheduled_at = parse_datetime(str(scheduled_at_value)) if scheduled_at_value else None
+    if scheduled_at_value and (scheduled_at is None or timezone.is_naive(scheduled_at)):
+        return JsonResponse({'status': 'error', 'message': 'Choose a valid local print time.'}, status=400)
+    if scheduled_at and scheduled_at <= timezone.now():
+        return JsonResponse({'status': 'error', 'message': 'Print time must be in the future.'}, status=400)
     if not branches or report_date is None:
         return JsonResponse({'status': 'error', 'message': 'Select at least one branch and a valid report date.'}, status=400)
 
@@ -470,11 +482,16 @@ def request_sales_report(request):
             request_id=request_id,
             branch=branch,
             report_date=report_date,
+            scheduled_at=scheduled_at,
+            status='scheduled' if scheduled_at else 'pending',
             requested_by=request.user.get_username(),
         ))
     return JsonResponse({
         'status': 'accepted',
-        'message': f'Sales reports queued for {len(reports)} branch(es) on {report_date.isoformat()}.',
+        'message': (
+            f'Sales reports scheduled for {len(reports)} branch(es) at {timezone.localtime(scheduled_at).strftime("%Y-%m-%d %H:%M")}.'
+            if scheduled_at else f'Sales reports queued for {len(reports)} branch(es) on {report_date.isoformat()}.'
+        ),
         'reports': [report_payload(report) for report in reports],
     }, status=202)
 
@@ -1547,10 +1564,12 @@ def sync_product_catalog(request):
                 continue
             available_quantity = whole_quantity(Decimal(str(item.get('available_quantity', 0) or 0)))
             selling_price = Decimal(str(item.get('selling_price', 0) or 0))
+            tax_rate_value = item.get('tax_rate')
+            tax_rate = Decimal(str(tax_rate_value)) if tax_rate_value is not None and str(tax_rate_value).strip() else None
             sold_quantity_value = item.get('sold_quantity')
             sold_quantity = whole_quantity(Decimal(str(sold_quantity_value or 0))) if sold_quantity_value is not None else None
-            catalog, created = ProductCatalog.objects.select_for_update().get_or_create(
-                branch=branch,
+            matching_catalogs = list(ProductCatalog.objects.select_for_update().filter(
+                branch__iexact=branch,
                 product_id=product_id,
                 defaults={'available_quantity': available_quantity, 'selling_price': selling_price, 'branch_confirmed': True},
             )
@@ -1628,6 +1647,26 @@ def sync_product_catalog(request):
             if sold_quantity is not None:
                 catalog.sold_quantity = sold_quantity
             catalog.save()
+
+            if tax_rate is not None:
+                main_catalog = ProductCatalog.objects.filter(
+                    branch__iexact='MAIN',
+                    product_id=product_id,
+                ).first()
+                if main_catalog is None:
+                    ProductCatalog.objects.create(
+                        branch='MAIN',
+                        product_id=product_id,
+                        product_name=product_name,
+                        product_code=catalog.product_code,
+                        barcode=catalog.barcode,
+                        selling_price=catalog.selling_price,
+                        tax_rate=tax_rate,
+                        branch_confirmed=True,
+                    )
+                elif (tax_rate_changed and not created) or (main_catalog.tax_rate == 0 and tax_rate != 0):
+                    main_catalog.tax_rate = tax_rate
+                    main_catalog.save(update_fields=['tax_rate', 'updated_at'])
             updated += 1
 
     invalidate_product_catalog_cache()
@@ -1951,7 +1990,12 @@ def branch_sync(request):
         pending_query = DeletionRecord.objects.filter(status='pending')
         if branch_name:
             pending_query = pending_query.filter(branch__iexact=branch_name)
-        pending = [record_payload(item) for item in pending_query]
+        with transaction.atomic():
+            pending_records = list(pending_query.select_for_update())
+            for record in pending_records:
+                record.status = 'processing'
+                record.save(update_fields=['status'])
+        pending = [record_payload(item) for item in pending_records]
 
         report_query = SalesReportRequest.objects.filter(status='pending')
         if branch_name:
@@ -2123,15 +2167,18 @@ def main_sync(request):
         ]
         queue.sort(key=lambda item: item['timestamp'], reverse=True)
 
-        return JsonResponse({
+        response = JsonResponse({
             'status': 'ok',
             'service': 'main_sync_trigger',
             'pending_deletions': pending,
             'queue': queue,
             'pending_count': DeletionRecord.objects.filter(status__in=['pending', 'processing']).count(),
             'recently_processed': processed,
-            'processed_count': DeletionRecord.objects.filter(status='processed').count()
+            'processed_count': DeletionRecord.objects.filter(status='processed').count(),
+            'queue': queue[:40],
         })
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
 
     try:
         payload = json.loads(request.body or '{}')

@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import SetPasswordForm, UserCreationForm
 from django.core.cache import cache
-from django.db import OperationalError, ProgrammingError, close_old_connections, connection, transaction
+from django.db import IntegrityError, OperationalError, ProgrammingError, close_old_connections, connection, transaction
 from django.db.models import Case, IntegerField, Max, Q, Sum, When
 from django.db.models.functions import Cast
 from django.http import JsonResponse, HttpResponse
@@ -1506,16 +1506,55 @@ def sync_product_catalog(request):
             tax_rate = Decimal(str(tax_rate_value)) if tax_rate_value is not None and str(tax_rate_value).strip() else None
             sold_quantity_value = item.get('sold_quantity')
             sold_quantity = whole_quantity(Decimal(str(sold_quantity_value or 0))) if sold_quantity_value is not None else None
-            catalog, created = ProductCatalog.objects.select_for_update().get_or_create(
-                branch=branch,
+            matching_catalogs = list(ProductCatalog.objects.select_for_update().filter(
+                branch__iexact=branch,
                 product_id=product_id,
-                defaults={
-                    'available_quantity': available_quantity,
-                    'selling_price': selling_price,
-                    'tax_rate': tax_rate if tax_rate is not None else Decimal('0'),
-                    'branch_confirmed': True,
-                },
+            ).order_by('-updated_at', '-pk'))
+            catalog = next(
+                (candidate for candidate in matching_catalogs if candidate.branch == branch),
+                matching_catalogs[0] if matching_catalogs else None,
             )
+            created = catalog is None
+            if created:
+                try:
+                    with transaction.atomic():
+                        catalog = ProductCatalog.objects.create(
+                            branch=branch,
+                            product_id=product_id,
+                            available_quantity=available_quantity,
+                            selling_price=selling_price,
+                            tax_rate=tax_rate if tax_rate is not None else Decimal('0'),
+                            branch_confirmed=True,
+                        )
+                except IntegrityError:
+                    matching_catalogs = list(ProductCatalog.objects.select_for_update().filter(
+                        branch__iexact=branch,
+                        product_id=product_id,
+                    ).order_by('-updated_at', '-pk'))
+                    if not matching_catalogs:
+                        raise
+                    catalog = next(
+                        (candidate for candidate in matching_catalogs if candidate.branch == branch),
+                        matching_catalogs[0],
+                    )
+                    created = False
+
+            duplicate_ids = [candidate.pk for candidate in matching_catalogs if candidate.pk != catalog.pk]
+            for duplicate in matching_catalogs:
+                if duplicate.pk == catalog.pk:
+                    continue
+                if duplicate.pending_stock_adjustment and not catalog.pending_stock_adjustment:
+                    catalog.pending_stock_adjustment = True
+                    catalog.pending_stock_quantity = duplicate.pending_stock_quantity
+                if duplicate.pending_price_update and not catalog.pending_price_update:
+                    catalog.pending_price_update = True
+                    catalog.pending_selling_price = duplicate.pending_selling_price
+                if duplicate.sold_quantity is not None and (catalog.sold_quantity is None or duplicate.sold_quantity > catalog.sold_quantity):
+                    catalog.sold_quantity = duplicate.sold_quantity
+            if duplicate_ids:
+                ProductCatalog.objects.filter(pk__in=duplicate_ids).delete()
+            if catalog.branch != branch:
+                catalog.branch = branch
             catalog.branch_confirmed = True
             tax_rate_changed = tax_rate is not None and catalog.tax_rate != tax_rate
             if tax_rate is not None:

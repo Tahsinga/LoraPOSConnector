@@ -34,6 +34,34 @@ class BandwidthCompressionTests(TestCase):
 		self.assertLess(len(response.content), len(decompressed))
 
 
+class ProductCatalogSyncTests(TestCase):
+	def test_sync_collapses_duplicate_case_variants_and_remains_idempotent(self):
+		ProductCatalog.objects.create(
+			branch='BranchA', product_id=8001, product_name='Catalog Product', available_quantity=4,
+		)
+		ProductCatalog.objects.create(
+			branch='brancha', product_id=8001, product_name='Catalog Product', available_quantity=3,
+		)
+		payload = json.dumps({
+			'branch': 'BranchA',
+			'products': [{
+				'product_id': 8001,
+				'product_name': 'Catalog Product',
+				'available_quantity': 12,
+				'selling_price': '11.00',
+				'tax_rate': '5.00',
+			}],
+		})
+
+		first = self.client.post('/api/products/sync/', data=payload, content_type='application/json')
+		second = self.client.post('/api/products/sync/', data=payload, content_type='application/json')
+
+		self.assertEqual(first.status_code, 200)
+		self.assertEqual(second.status_code, 200)
+		self.assertEqual(ProductCatalog.objects.filter(branch__iexact='BranchA', product_id=8001).count(), 1)
+		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=8001).available_quantity, 12)
+
+
 class ProductDeletionTests(TestCase):
 	def setUp(self):
 		self.password = 'ProductDeletePass4182!'

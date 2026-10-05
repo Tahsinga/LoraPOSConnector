@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Upper
 
 
 class DeletionRecord(models.Model):
@@ -119,6 +120,7 @@ class StockMovement(models.Model):
 		indexes = [
 			models.Index(fields=['created_at']),
 			models.Index(fields=['branch', 'created_at']),
+			models.Index(Upper('branch'), 'product_id', 'movement_type', models.F('created_at').desc(), name='sm_upper_branch_prod_type_idx'),
 		]
 
 
@@ -145,6 +147,7 @@ class ProductCatalog(models.Model):
 		indexes = [
 			models.Index(fields=['branch', 'branch_confirmed']),
 			models.Index(fields=['branch', 'product_name']),
+			models.Index(Upper('branch'), 'product_id', name='pc_upper_branch_product_idx'),
 		]
 		constraints = [
 			models.UniqueConstraint(fields=['branch', 'product_id'], name='unique_branch_product'),

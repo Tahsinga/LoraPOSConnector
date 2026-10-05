@@ -1529,8 +1529,9 @@ def product_catalog(request):
 
     query = str(request.GET.get('q', '')).strip()
     branch = str(request.GET.get('branch', '')).strip()
+    include_all = str(request.GET.get('all', '')).strip().lower() in {'1', 'true', 'yes'}
     cache_version = cache.get(PRODUCT_CACHE_VERSION_KEY, 0)
-    request_key = hashlib.sha256(f'{branch.casefold()}:{query.casefold()}'.encode()).hexdigest()
+    request_key = hashlib.sha256(f'{branch.casefold()}:{query.casefold()}:{include_all}'.encode()).hexdigest()
     cache_key = f'lora:products:{cache_version}:{request_key}'
     cached_products = cache.get(cache_key)
     if cached_products is not None:
@@ -1551,7 +1552,7 @@ def product_catalog(request):
             | Q(barcode__icontains=query)
             | Q(product_id__icontains=query)
         )[:30]
-    else:
+    elif not include_all:
         products = products[:3000]
     product_rows = [product_payload(product) for product in products]
     cache.set(cache_key, product_rows, PRODUCT_CACHE_SECONDS)

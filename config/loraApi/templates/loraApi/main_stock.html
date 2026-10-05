@@ -449,34 +449,43 @@
       const startedAt = new Date().toISOString();
       const params = new URLSearchParams({ branch });
       if (branchCatalogSince && branchCatalogSinceBranch === branch) params.set('since', branchCatalogSince);
-      const response = await fetch(`/api/stock/summary/?${params}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Products could not be loaded.');
+      const [catalogResponse, summaryResponse] = await Promise.all([
+        fetch(`/api/products/?branch=${encodeURIComponent(branch)}&all=1&_=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) }),
+        fetch(`/api/stock/summary/?${params}`, { cache: 'no-store', signal: AbortSignal.timeout(30000) }).catch(() => null),
+      ]);
+      const catalogData = await catalogResponse.json().catch(() => ({}));
+      if (!catalogResponse.ok) throw new Error(catalogData.message || 'Product catalog could not be loaded.');
       if (requestId !== branchProductsRequestId) return;
-      const products = data.products || [];
-      const fullSnapshot = data.full !== false;
-      const removedProductIds = (data.removed_product_ids || []).map(String);
-      if (fullSnapshot) {
-        branchCatalogProducts = products;
-      } else if (data.changed) {
-        const productsById = new Map(branchCatalogProducts.map(product => [String(product.product_id), product]));
-        products.forEach(product => productsById.set(String(product.product_id), product));
-        removedProductIds.forEach(productId => productsById.delete(productId));
-        branchCatalogProducts = [...productsById.values()];
-      } else if (removedProductIds.length) {
-        const removedIds = new Set(removedProductIds);
-        branchCatalogProducts = branchCatalogProducts.filter(product => !removedIds.has(String(product.product_id)));
+      let summaryData = null;
+      try {
+        summaryData = await summaryResponse.json();
+        if (!summaryResponse.ok) throw new Error(summaryData.message || 'Stock figures could not be loaded.');
+      } catch (error) {
+        summaryData = null;
       }
-      branchCatalogSince = startedAt;
-      branchCatalogSinceBranch = branch;
-      if (!fullSnapshot && !data.changed && !removedProductIds.length) {
-        productCatalogStatus.textContent = `${branchCatalogProducts.length} products up to date for ${branch}.`;
-        return;
+      const previousProducts = new Map(branchCatalogProducts.map(product => [String(product.product_id), product]));
+      const summaryProducts = new Map((summaryData?.products || []).map(product => [String(product.product_id), product]));
+      const stockFields = ['main_quantity', 'received_quantity', 'sent_quantity', 'sold_quantity', 'movement_balance'];
+      branchCatalogProducts = (catalogData.products || []).map(product => {
+        const productId = String(product.product_id);
+        const previous = previousProducts.get(productId) || {};
+        const summary = summaryProducts.get(productId) || {};
+        return {
+          ...product,
+          available_quantity: summary.available_quantity ?? product.available_quantity ?? previous.available_quantity ?? '0',
+          ...Object.fromEntries(stockFields.map(field => [field, summary[field] ?? previous[field] ?? '0'])),
+        };
+      });
+      if (summaryData) {
+        branchCatalogSince = startedAt;
+        branchCatalogSinceBranch = branch;
       }
       document.querySelector('#main-stock-products').innerHTML = productOptions(branchCatalogProducts);
       branchPriceProducts.innerHTML = productOptions(branchCatalogProducts);
       document.querySelector('#transfer-products').innerHTML = productOptions(branchCatalogProducts);
-      productCatalogStatus.textContent = `${branchCatalogProducts.length} products updated for ${branch}.`;
+      productCatalogStatus.textContent = summaryData
+        ? `${branchCatalogProducts.length} products loaded for ${branch}.`
+        : `${branchCatalogProducts.length} products loaded for ${branch}; stock figures could not be refreshed.`;
       renderBranchProducts();
       if (transferProductOptions.classList.contains('is-open')) renderTransferProductOptions();
       if (mainStockProductOptions.classList.contains('is-open')) renderMainStockProductOptions();

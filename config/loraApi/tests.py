@@ -170,6 +170,20 @@ class ProductDeletionTests(TestCase):
 		self.assertContains(response, '/products/deleted/')
 		self.assertContains(response, '/api/products/delete/')
 
+	def test_product_catalog_all_returns_more_than_default_limit(self):
+		ProductCatalog.objects.bulk_create([
+			ProductCatalog(branch='BranchAllProducts', product_id=10000 + index, product_name=f'Product {index}')
+			for index in range(3001)
+		])
+
+		default_response = self.client.get('/api/products/', {'branch': 'BranchAllProducts'})
+		all_response = self.client.get('/api/products/', {'branch': 'BranchAllProducts', 'all': '1'})
+
+		self.assertEqual(default_response.status_code, 200)
+		self.assertEqual(len(default_response.json()['products']), 3000)
+		self.assertEqual(all_response.status_code, 200)
+		self.assertEqual(len(all_response.json()['products']), 3001)
+
 
 class ProductTaxRateTests(TestCase):
 	def setUp(self):

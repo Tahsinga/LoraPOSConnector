@@ -500,6 +500,28 @@ class StockTransferTests(TestCase):
 		self.assertEqual(second.status_code, 200)
 		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=999).available_quantity, 15)
 
+	def test_transfer_completion_merges_case_variant_catalog_rows(self):
+		ProductCatalog.objects.create(
+			branch='BranchA', product_id=1001, product_name='Test Product', available_quantity=10,
+		)
+		ProductCatalog.objects.create(
+			branch='brancha', product_id=1001, product_name='Test Product', available_quantity=20,
+		)
+		transfer = StockTransfer.objects.create(
+			transfer_id='TRANSFER_BRANCHA_1001_DUPLICATE', branch='BranchA', product_id=1001,
+			product_name='Test Product', quantity=5,
+		)
+
+		response = self.client.post(
+			'/api/stock/transfers/complete/',
+			data=json.dumps({'transfer_id': transfer.transfer_id, 'branch': 'BranchA', 'success': True}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(ProductCatalog.objects.filter(branch__iexact='BranchA', product_id=1001).count(), 1)
+		self.assertEqual(ProductCatalog.objects.get(branch='BranchA', product_id=1001).available_quantity, 15)
+
 	def test_branch_price_changes_only_after_branch_confirmation(self):
 		ProductCatalog.objects.create(
 			branch='BranchA', product_id=999, product_name='Test Product', selling_price='10.00',

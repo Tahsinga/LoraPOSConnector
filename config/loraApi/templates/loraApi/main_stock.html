@@ -433,7 +433,7 @@
       loadStockButton.setAttribute('aria-busy', 'true');
     }
     if (!branch) {
-      if (requestId !== branchProductsRequestId) return;
+      if (requestId !== branchProductsRequestId) return false;
       branchCatalogProducts = [];
       branchPriceProducts.innerHTML = '';
       branchProducts.innerHTML = '<p class="empty">Select a branch to see its products.</p>';
@@ -442,7 +442,7 @@
       loadStockButton.disabled = false;
       loadStockButton.textContent = 'Load stock';
       loadStockButton.setAttribute('aria-busy', 'false');
-      return;
+      return false;
     }
     if (showLoading) productCatalogStatus.textContent = 'Loading products...';
     try {
@@ -455,7 +455,7 @@
       ]);
       const catalogData = await catalogResponse.json().catch(() => ({}));
       if (!catalogResponse.ok) throw new Error(catalogData.message || 'Product catalog could not be loaded.');
-      if (requestId !== branchProductsRequestId) return;
+      if (requestId !== branchProductsRequestId) return false;
       let summaryData = null;
       try {
         summaryData = await summaryResponse.json();
@@ -490,18 +490,21 @@
       if (transferProductOptions.classList.contains('is-open')) renderTransferProductOptions();
       if (mainStockProductOptions.classList.contains('is-open')) renderMainStockProductOptions();
       if (branchPriceProductOptions.classList.contains('is-open')) renderBranchPriceProductOptions();
+      return true;
     } catch (error) {
-      if (requestId !== branchProductsRequestId) return;
+      if (requestId !== branchProductsRequestId) return false;
       productCatalogStatus.textContent = branchCatalogProducts.length
         ? `Refresh failed; showing the last ${branchCatalogProducts.length} products.`
         : 'Products unavailable.';
+      return false;
     } finally {
-      if (requestId !== branchProductsRequestId) return;
-      branchProductsLoading = false;
-      loadStockButton.disabled = false;
-      loadStockButton.textContent = 'Load stock';
-      loadStockButton.setAttribute('aria-busy', 'false');
-      if (showLoading) setBranchCardsLoading(false);
+      if (requestId === branchProductsRequestId) {
+        branchProductsLoading = false;
+        loadStockButton.disabled = false;
+        loadStockButton.textContent = 'Load stock';
+        loadStockButton.setAttribute('aria-busy', 'false');
+        if (showLoading) setBranchCardsLoading(false);
+      }
     }
   }
   refreshStockButton.addEventListener('click', () => loadBranchProducts(true));
@@ -710,8 +713,10 @@
       pendingProductDeletion = null;
       branchCatalogSince = '';
       branchCatalogSinceBranch = '';
-      await loadBranchProducts(false);
-      productCatalogStatus.textContent = `Deletion queued for ${product.product_name} (Product ID ${product.product_id}) at ${data.branches.join(', ')}. It will be removed from each branch on its next sync.`;
+      const refreshed = await loadBranchProducts(false);
+      productCatalogStatus.textContent = refreshed
+        ? `Deletion queued for ${product.product_name} (Product ID ${product.product_id}) at ${data.branches.join(', ')}. The product list was refreshed. Branch systems will remove it on their next sync.`
+        : `Deletion was queued for ${product.product_name} (Product ID ${product.product_id}), but the product list could not be refreshed. Use Refresh products to try again.`;
     } catch (error) {
       productDeleteStatus.className = 'notice error';
       productDeleteStatus.textContent = error.message;

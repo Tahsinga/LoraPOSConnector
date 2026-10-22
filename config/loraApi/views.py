@@ -713,6 +713,7 @@ def stock_summary(request):
         since = timezone.make_aware(since, timezone.get_current_timezone())
     today_start = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow_start = today_start + timedelta(days=1)
+    snapshot_time = timezone.now()
     full_snapshot = since is None or timezone.localtime(since).date() != today_start.date()
 
     if full_snapshot:
@@ -754,6 +755,7 @@ def stock_summary(request):
                 'branch': branch,
                 'changed': False,
                 'full': False,
+                'as_of': snapshot_time.isoformat(),
                 'products': [],
                 'removed_product_ids': [],
             })
@@ -769,7 +771,8 @@ def stock_summary(request):
         product_id__in=product_ids,
         created_at__gte=today_start,
         created_at__lt=tomorrow_start,
-    ).values('product_id', 'movement_type').annotate(total=Sum(Cast('quantity', IntegerField())))
+        movement_type__in=['received', 'sold'],
+    ).values('product_id', 'movement_type').annotate(total=Sum(Abs(Cast('quantity', IntegerField()))))
     received_by_product = {}
     sold_by_product = {}
     for movement in movement_totals:
@@ -809,8 +812,8 @@ def stock_summary(request):
             | Q(created_at=F('latest_adjustment_at'), id__gt=F('latest_adjustment_id')),
         ).values('product_id').annotate(
             total=Sum(Case(
-                When(movement_type='received', then=Cast('quantity', IntegerField())),
-                When(movement_type='sold', then=-Cast('quantity', IntegerField())),
+                When(movement_type='received', then=Abs(Cast('quantity', IntegerField()))),
+                When(movement_type='sold', then=-Abs(Cast('quantity', IntegerField()))),
                 default=0,
                 output_field=IntegerField(),
             )),
@@ -833,6 +836,7 @@ def stock_summary(request):
         'branch': branch,
         'changed': True,
         'full': full_snapshot,
+        'as_of': snapshot_time.isoformat(),
         'products': summary,
         'removed_product_ids': removed_product_ids,
     })
@@ -864,7 +868,7 @@ def stock_movements(request):
                 'product_id': movement.product_id,
                 'product_name': movement.product_name,
                 'movement_type': movement.movement_type,
-                'quantity': str(movement.quantity),
+                'quantity': str(movement_quantity(movement)),
                 'source': 'Sold' if movement.movement_type == 'sold' else (movement.source or 'System'),
                 'created_at': movement.created_at.isoformat(),
             }
@@ -899,12 +903,13 @@ def product_movement_history_api(request):
     running_balances = {product_id: Decimal('0') for product_id in product_ids}
     movement_rows = []
     for movement in all_movements:
+        quantity = movement_quantity(movement)
         if movement.movement_type == 'adjusted':
-            running_balances[movement.product_id] = movement.quantity
+            running_balances[movement.product_id] = quantity
         elif movement.movement_type == 'sold':
-            running_balances[movement.product_id] -= movement.quantity
+            running_balances[movement.product_id] -= quantity
         else:
-            running_balances[movement.product_id] += movement.quantity
+            running_balances[movement.product_id] += quantity
         if from_date and movement.created_at.date().isoformat() < from_date:
             continue
         if to_date and movement.created_at.date().isoformat() > to_date:
@@ -913,7 +918,7 @@ def product_movement_history_api(request):
             'product_id': movement.product_id,
             'product_name': movement.product_name,
             'movement_type': movement.movement_type,
-            'quantity': str(movement.quantity),
+            'quantity': str(quantity),
             'balance': str(running_balances[movement.product_id]),
             'branch': movement.branch or 'Main stock',
             'source': 'Sold' if movement.movement_type == 'sold' else (movement.source or 'System'),
@@ -1111,14 +1116,6 @@ def create_stock_transfer(request):
                 balance.product_name = product_name
                 balance.quantity += quantity
                 balance.save(update_fields=['product_name', 'quantity', 'updated_at'])
-                StockMovement.objects.create(
-                    branch=branch,
-                    product_id=product_id,
-                    product_name=product_name,
-                    movement_type='received',
-                    quantity=quantity,
-                    source=f'{request.user.get_username()} (transfer to {branch})',
-                )
                 transfer = StockTransfer.objects.create(
                     transfer_id=f'TRANSFER_{branch}_{product_id}_{int(time.time() * 1000)}',
                     branch=branch,
@@ -1407,7 +1404,6 @@ def delete_branch_product(request):
     with transaction.atomic():
         branch_products = list(ProductCatalog.objects.select_for_update().filter(
             product_id=product_id,
-            branch_confirmed=True,
         ).exclude(branch__iexact='MAIN').order_by('branch'))
         product = next(
             (item for item in branch_products if item.branch.casefold() == branch.casefold()),
@@ -1415,11 +1411,6 @@ def delete_branch_product(request):
         )
         if product is None:
             return JsonResponse({'status': 'error', 'message': 'The product was not found for this branch.'}, status=404)
-        if ProductCatalog.objects.filter(
-            product_id=product_id,
-            pending_product_creation=True,
-        ).exclude(branch__iexact='MAIN').exists():
-            return JsonResponse({'status': 'error', 'message': 'Wait for product creation to finish before deleting it.'}, status=409)
         if ProductDeletionRequest.objects.filter(
             product_id=product_id,
             status='pending',

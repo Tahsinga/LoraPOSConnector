@@ -94,6 +94,24 @@ class ProductDeletionTests(TestCase):
 		self.assertTrue(ProductCatalog.objects.filter(branch='BranchA', product_id=3002).exists())
 		self.assertTrue(ProductCatalog.objects.filter(branch='BranchB', product_id=3002).exists())
 
+	def test_deletion_includes_branches_where_product_creation_is_pending(self):
+		pending_product = ProductCatalog.objects.get(branch='BranchB', product_id=3001)
+		pending_product.branch_confirmed = False
+		pending_product.pending_product_creation = True
+		pending_product.save(update_fields=['branch_confirmed', 'pending_product_creation', 'updated_at'])
+
+		response = self.client.post(
+			'/api/products/delete/',
+			data=json.dumps({'branch': 'BranchA', 'product_id': 3001, 'password': 'ProductDeletePass4182!'}),
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 202)
+		self.assertEqual(response.json()['branches'], ['BranchA', 'BranchB'])
+		branch_sync = self.client.get('/api/branch-sync/?branch=BranchB').json()
+		self.assertEqual(branch_sync['pending_product_creations'][0]['product_id'], 3001)
+		self.assertEqual(branch_sync['pending_product_deletions'][0]['product_id'], 3001)
+
 	def test_failed_branch_deletion_restores_product_to_web_catalog(self):
 		response = self.client.post(
 			'/api/products/delete/',
@@ -200,6 +218,8 @@ class ProductDeletionTests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Delete from all branches')
+		self.assertContains(response, 'const refreshed = await loadBranchProducts(false);')
+		self.assertContains(response, 'The product list was refreshed.')
 		self.assertContains(response, 'Your account password')
 		self.assertContains(response, 'Save tax')
 		self.assertContains(response, '/products/deleted/')

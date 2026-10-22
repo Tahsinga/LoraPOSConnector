@@ -416,7 +416,7 @@
     const query = branchProductSearch.value.trim().toLowerCase();
     const products = branchCatalogProducts.filter(product => [product.product_name, product.product_code, product.barcode, product.product_id].some(value => String(value ?? '').toLowerCase().includes(query)));
     branchProducts.innerHTML = products.length
-      ? `<table class="stock-table"><thead><tr><th>Product</th><th>Selling price</th><th>Tax rate</th><th>Branch available</th><th>Sent</th><th>Sold</th><th>Actions</th></tr></thead><tbody>${products.map(product => { const isNegative = Number(product.available_quantity) < 0; const productId = escapeHtml(product.product_id); return `<tr class="${isNegative ? 'negative-stock' : ''}" data-product-id="${productId}"><td class="product-name">${escapeHtml(product.product_name)}</td><td>${escapeHtml(product.selling_price)}</td><td><form class="tax-rate-form" data-product-tax-rate="${productId}"><input type="number" min="0" max="100" step="0.01" value="${escapeHtml(product.tax_rate ?? 0)}" aria-label="Tax rate percentage for ${escapeHtml(product.product_name)}"><button type="submit">Save tax</button></form></td><td><strong>${escapeHtml(product.available_quantity)}</strong>${isNegative ? '<span class="negative-stock-label">Negative stock</span>' : ''}</td><td>${escapeHtml(product.sent_quantity)}</td><td>${escapeHtml(product.sold_quantity)}</td><td><button type="button" data-product-select="${productId}">Select</button><button type="button" class="delete-product-button" data-product-delete="${productId}" aria-label="Delete ${escapeHtml(product.product_name)} at branch">Delete at branch</button></td></tr>`; }).join('')}</tbody></table>`
+      ? `<table class="stock-table"><thead><tr><th>Product</th><th>Selling price</th><th>Tax rate</th><th>Branch available</th><th>Sent</th><th>Sold</th><th>Actions</th></tr></thead><tbody>${products.map(product => { const isNegative = Number(product.available_quantity) < 0; const productId = escapeHtml(product.product_id); return `<tr class="${isNegative ? 'negative-stock' : ''}" data-product-id="${productId}"><td class="product-name">${escapeHtml(product.product_name)}</td><td>${escapeHtml(product.selling_price)}</td><td><form class="tax-rate-form" data-product-tax-rate="${productId}"><input type="number" min="0" max="100" step="0.01" value="${escapeHtml(product.tax_rate ?? 0)}" aria-label="Tax rate percentage for ${escapeHtml(product.product_name)}"><button type="submit">Save tax</button></form></td><td><strong>${escapeHtml(product.available_quantity)}</strong>${isNegative ? '<span class="negative-stock-label">Negative stock</span>' : ''}</td><td>${escapeHtml(product.sent_quantity)}</td><td>${escapeHtml(product.sold_quantity)}</td><td><button type="button" data-product-select="${productId}">Select</button><button type="button" class="delete-product-button" data-product-delete="${productId}" aria-label="Delete ${escapeHtml(product.product_name)} from all branches">Delete from all branches</button></td></tr>`; }).join('')}</tbody></table>`
       : '<p class="empty">No products match your search.</p>';
   }
   async function loadBranchProducts(showLoading = true) {
@@ -679,7 +679,7 @@
       const branch = selectedBranch.value;
       if (!product || !branch) return;
       pendingProductDeletion = { product, branch, button: deleteButton };
-      productDeleteDescription.textContent = `Delete ${product.product_name} from ${branch}? Historical sales will be kept.`;
+      productDeleteDescription.textContent = `Delete ${product.product_name} (Product ID ${product.product_id}) from all branches? Historical sales will be kept.`;
       productDeletePassword.value = '';
       productDeleteStatus.className = 'notice';
       productDeleteStatus.textContent = '';
@@ -711,7 +711,7 @@
       branchCatalogSince = '';
       branchCatalogSinceBranch = '';
       await loadBranchProducts(false);
-      productCatalogStatus.textContent = `Deletion queued for ${product.product_name}; it will be deactivated at ${branch} on the next sync.`;
+      productCatalogStatus.textContent = `Deletion queued for ${product.product_name} (Product ID ${product.product_id}) at ${data.branches.join(', ')}. It will be removed from each branch on its next sync.`;
     } catch (error) {
       productDeleteStatus.className = 'notice error';
       productDeleteStatus.textContent = error.message;
